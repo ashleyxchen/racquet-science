@@ -1,0 +1,10 @@
+{
+  "appId": "com.ashleyc.app",
+  "appName": "test-capacitor",
+  "webDir": "dist",
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": false
+    }
+  }
+}

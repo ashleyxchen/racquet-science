@@ -15,6 +15,7 @@
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		AD8298B1FE7813A02AAFC2CE /* Pods_App.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BA0BABCEF341CC597E84A3F2 /* Pods_App.framework */; };
+		B6421BF52F2948E3007C3975 /* MyViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6421BF42F2948E3007C3975 /* MyViewController.swift */; };
 		B6442D572EDD2C3F002CCEC5 /* WatchMotionPlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = B6442D562EDD2C3F002CCEC5 /* WatchMotionPlugin.m */; };
 		B6442D5A2EDD2C4F002CCEC5 /* WatchMotionPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6442D592EDD2C4F002CCEC5 /* WatchMotionPlugin.swift */; };
 		B659B8C22EDD0A1E0041DAE1 /* Watchkit App Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = B659B8B82EDD0A1A0041DAE1 /* Watchkit App Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -62,6 +63,7 @@
 		504EC3131FED79650016851F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
 		880A0E79BF2EAEE02A9D7876 /* Pods-App.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-App.release.xcconfig"; path = "Target Support Files/Pods-App/Pods-App.release.xcconfig"; sourceTree = "<group>"; };
+		B6421BF42F2948E3007C3975 /* MyViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyViewController.swift; sourceTree = "<group>"; };
 		B6442D562EDD2C3F002CCEC5 /* WatchMotionPlugin.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WatchMotionPlugin.m; sourceTree = "<group>"; };
 		B6442D582EDD2C43002CCEC5 /* App-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "App-Bridging-Header.h"; sourceTree = "<group>"; };
 		B6442D592EDD2C4F002CCEC5 /* WatchMotionPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchMotionPlugin.swift; sourceTree = "<group>"; };
@@ -135,6 +137,7 @@
 		504EC3061FED79650016851F /* App */ = {
 			isa = PBXGroup;
 			children = (
+				B6421BF42F2948E3007C3975 /* MyViewController.swift */,
 				B6442D592EDD2C4F002CCEC5 /* WatchMotionPlugin.swift */,
 				B6442D562EDD2C3F002CCEC5 /* WatchMotionPlugin.m */,
 				B698F7BC2EDD258900A5CE11 /* WatchConnectivityManager.swift */,
@@ -336,6 +339,7 @@
 				B698F7BD2EDD258900A5CE11 /* WatchConnectivityManager.swift in Sources */,
 				B6442D572EDD2C3F002CCEC5 /* WatchMotionPlugin.m in Sources */,
 				B6442D5A2EDD2C4F002CCEC5 /* WatchMotionPlugin.swift in Sources */,
+				B6421BF52F2948E3007C3975 /* MyViewController.swift in Sources */,
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -563,9 +567,12 @@
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Watchkit-App-Watch-App-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Watchkit App";
+				INFOPLIST_KEY_NSMotionUsageDescription = "This app needs access to motion data to track your movements.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.ashleyc.app;
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -608,9 +615,12 @@
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Watchkit-App-Watch-App-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Watchkit App";
+				INFOPLIST_KEY_NSMotionUsageDescription = "This app needs access to motion data to track your movements.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.ashleyc.app;
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

@@ -7,4 +7,10 @@
    <FileRef
       location = "group:Pods/Pods.xcodeproj">
    </FileRef>
+   <FileRef
+      location = "group:Watchkit_App_Info.plist">
+   </FileRef>
+   <FileRef
+      location = "group:Watchkit-App-Watch-App-Info.plist">
+   </FileRef>
 </Workspace>

@@ -21,78 +21,10 @@
 
     <link rel="icon" type="image/x-icon" href="./assets/icon/favicon.ico" />
     <link rel="manifest" href="./manifest.json" />
-    <link rel="stylesheet" href="./css/style.css" />
     <meta name="theme-color" content="#31d53d" />
   </head>
   <body>
-    <div id="main">
-      <div id="title" style="padding-top: 45px;">
-        Grip Sense
-      </div>
-
-      <!-- Apple Watch Motion Data -->
-      <div id="data-section">
-        <h2>Apple Watch IMU</h2>
-        <div id="watch-status" class="status-indicator">
-          Status: <span id="watch-connection-status">Disconnected</span>
-        </div>
-
-        <div class="motion-data">
-          <h3>Accelerometer (g)</h3>
-          <div class="data-row">X: <span id="watch-accel-x">0.000</span></div>
-          <div class="data-row">Y: <span id="watch-accel-y">0.000</span></div>
-          <div class="data-row">Z: <span id="watch-accel-z">0.000</span></div>
-        </div>
-
-        <div class="motion-data">
-          <h3>Gyroscope (rad/s)</h3>
-          <div class="data-row">X: <span id="watch-gyro-x">0.000</span></div>
-          <div class="data-row">Y: <span id="watch-gyro-y">0.000</span></div>
-          <div class="data-row">Z: <span id="watch-gyro-z">0.000</span></div>
-        </div>
-
-        <div class="motion-data">
-          <h3>Orientation (degrees)</h3>
-          <div class="data-row">Roll: <span id="watch-roll">0.0°</span></div>
-          <div class="data-row">Pitch: <span id="watch-pitch">0.0°</span></div>
-          <div class="data-row">Yaw: <span id="watch-yaw">0.0°</span></div>
-        </div>
-      </div>
-
-      <div id="data-section">
-        <h2>Racket IMU</h2>
-        <button id="button1" class="connect-button">Connect</button>
-        <div id="racket-status" class="status-indicator">
-          Status: <span id="racket-connection-status">Disconnected</span>
-        </div>
-        <div id="char1-display">
-          Char1:
-        </div>
-        <div id="char1"></div>
-        <button id="button2" class="buttons">Start Listen</button>
-
-        <div class="motion-data">
-          <h3>Accelerometer (g)</h3>
-          <div class="data-row">X: <span id="racket-accel-x">0.000</span></div>
-          <div class="data-row">Y: <span id="racket-accel-y">0.000</span></div>
-          <div class="data-row">Z: <span id="racket-accel-z">0.000</span></div>
-        </div>
-
-        <div class="motion-data">
-          <h3>Gyroscope (rad/s)</h3>
-          <div class="data-row">X: <span id="racket-gyro-x">0.000</span></div>
-          <div class="data-row">Y: <span id="racket-gyro-y">0.000</span></div>
-          <div class="data-row">Z: <span id="racket-gyro-z">0.000</span></div>
-        </div>
-
-        <div class="motion-data">
-          <h3>Orientation (degrees)</h3>
-          <div class="data-row">Roll: <span id="racket-roll">0.0°</span></div>
-          <div class="data-row">Pitch: <span id="racket-pitch">0.0°</span></div>
-          <div class="data-row">Yaw: <span id="racket-yaw">0.0°</span></div>
-        </div>
-      </div>   
-    </div>
-    <script src="./js/main.js" type="module"></script>
+    <div id="root"></div>
+    <script type="module" src="./main.tsx"></script>
   </body>
 </html>

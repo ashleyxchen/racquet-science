@@ -12,6 +12,7 @@ class MotionManager: NSObject, WCSessionDelegate {
 
     private let motionManager = CMMotionManager()
     private var updateTimer: Timer?
+    private var messageCount = 0  // Track how many messages sent
 
     // Update frequency: 10 Hz (10 updates per second)
     private let updateInterval = 0.1
@@ -49,21 +50,25 @@ class MotionManager: NSObject, WCSessionDelegate {
         }
 
         print("✅ Started Watch motion updates")
+        print("   - iPhone reachable: \(WCSession.default.isReachable)")
+        print("   - Will use: \(WCSession.default.isReachable ? "sendMessage (fast)" : "transferUserInfo (reliable)")")
     }
 
     func stopMotionUpdates() {
         motionManager.stopDeviceMotionUpdates()
         updateTimer?.invalidate()
         updateTimer = nil
-        print("🛑 Stopped Watch motion updates")
+        print("🛑 Stopped Watch motion updates (sent \(messageCount) messages)")
+        messageCount = 0
     }
 
     private func sendMotionData() {
         guard let motion = motionManager.deviceMotion,
-              WCSession.default.activationState == .activated,
-              WCSession.default.isReachable else {
+              WCSession.default.activationState == .activated else {
             return
         }
+        
+        messageCount += 1
 
         // Orientation (Euler angles in radians)
         let roll = motion.attitude.roll
@@ -85,6 +90,7 @@ class MotionManager: NSObject, WCSessionDelegate {
             "type": "motion_data",
             "source": "watch",
             "timestamp": Date().timeIntervalSince1970,
+            "messageCount": messageCount,
             "accel": [
                 "x": accelX,
                 "y": accelY,
@@ -102,9 +108,29 @@ class MotionManager: NSObject, WCSessionDelegate {
             ]
         ]
 
-        // Send to iPhone
-        WCSession.default.sendMessage(data, replyHandler: nil) { error in
-            // Silent fail - don't spam console
+        // Try to send immediately if iPhone is reachable (foreground-to-foreground)
+        if WCSession.default.isReachable {
+            WCSession.default.sendMessage(data, replyHandler: { reply in
+                // Successfully delivered and got reply
+                if let status = reply["status"] as? String {
+                    // Only log every 10th message to reduce spam
+                    if self.messageCount % 10 == 0 {
+                        print("✅ Motion data delivered via sendMessage (count: \(self.messageCount), status: \(status))")
+                    }
+                }
+            }) { error in
+                print("⚠️ sendMessage failed (count: \(self.messageCount)): \(error.localizedDescription)")
+                // Fallback to background transfer
+                let transfer = WCSession.default.transferUserInfo(data)
+                print("📤 Fallback: queued via transferUserInfo (outstanding: \(transfer.isTransferring))")
+            }
+        } else {
+            // iPhone not immediately reachable - use background transfer
+            let transfer = WCSession.default.transferUserInfo(data)
+            // Only log every 10th message to reduce spam
+            if messageCount % 10 == 0 {
+                print("📤 Motion data queued via transferUserInfo (count: \(messageCount), outstanding: \(transfer.isTransferring))")
+            }
         }
     }
 
@@ -115,6 +141,12 @@ class MotionManager: NSObject, WCSessionDelegate {
             print("❌ Watch session failed: \(error.localizedDescription)")
         } else {
             print("✅ Watch session ready")
+            print("   - isReachable: \(session.isReachable)")
+            print("   - activationState: \(activationState.rawValue)")
         }
+    }
+    
+    func sessionReachabilityDidChange(_ session: WCSession) {
+        print("📡 iPhone reachability changed: \(session.isReachable ? "REACHABLE ✅" : "NOT REACHABLE ❌")")
     }
 }

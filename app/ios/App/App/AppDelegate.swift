@@ -9,8 +9,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
 
-        // Initialize WatchConnectivity
+        print("📱 AppDelegate: App launching...")
+
+        // Initialize WatchConnectivity early
+        // Data will be cached until the plugin registers its callback
         _ = WatchConnectivityManager.shared
+        print("📱 AppDelegate: WatchConnectivityManager initialized")
 
         return true
     }

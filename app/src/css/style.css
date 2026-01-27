@@ -123,3 +123,106 @@ body {
 .buttons:active {
   background: #1976D2;
 }
+
+/* Navigation Grid */
+.nav-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 10px;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.nav-card {
+  background: #f5f5f5;
+  border: none;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.nav-card:active {
+  transform: scale(0.98);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.nav-card-icon {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.nav-card-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.nav-card-desc {
+  font-size: 14px;
+  color: #666;
+}
+
+/* Page Header */
+.page-header {
+  display: flex;
+  align-items: center;
+  padding-top: 45px;
+  margin-bottom: 15px;
+  position: relative;
+}
+
+.page-header #title {
+  flex: 1;
+  text-align: center;
+  margin-bottom: 0;
+}
+
+.back-button {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: #2196F3;
+  cursor: pointer;
+  padding: 8px 12px;
+  position: absolute;
+  left: 0;
+}
+
+.back-button:active {
+  opacity: 0.7;
+}
+
+/* Placeholder Content */
+.placeholder-content {
+  background: #f5f5f5;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 20px;
+  text-align: center;
+}
+
+.placeholder-content p {
+  color: #666;
+  margin-bottom: 15px;
+}
+
+.placeholder-content ul {
+  text-align: left;
+  color: #666;
+  padding-left: 25px;
+}
+
+.placeholder-content li {
+  margin-bottom: 8px;
+}
+
+/* Connected status (generic) */
+.connected {
+  color: #4CAF50 !important;
+  font-weight: bold;
+}

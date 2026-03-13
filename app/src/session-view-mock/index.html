@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Racquet Science - Data Visualization</title>
+    <meta name="theme-color" content="#9b7dd4">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="RacquetScience">
+    <link rel="manifest" href="manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div style="display: flex; align-items: center; gap: 18px; margin-bottom: 20px; padding: 15px 0;">
+                <img src="RS_logo.png" alt="Racquet Science Logo" onerror="this.src='RS_tennis.jpg'; this.style.height='65px';" style="height: 65px; width: auto; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(200, 170, 255, 0.3));">
+                <div>
+                    <h1 style="margin: 0; font-size: 2.8em; font-weight: 700; color: #9b7dd4; font-family: 'Playfair Display', serif; letter-spacing: 1px; text-shadow: 1px 1px 3px rgba(155, 125, 212, 0.2);">
+                        Racquet Science
+                    </h1>
+                    <div style="font-size: 0.85em; color: #b8a5d9; font-weight: 500; margin-top: 2px; letter-spacing: 0.5px; font-family: 'Poppins', sans-serif;">
+                        Tennis Elbow Prevention
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Design Option 2: Minimalist with Motion Lines (commented out - uncomment to use) -->
+            <!--
+            <div class="header-design-2" style="display: flex; align-items: center; gap: 20px; margin-bottom: 20px; padding: 25px; background: linear-gradient(135deg, #f0e6ff 0%, #e0ccff 100%); border-left: 5px solid #9b59b6; border-radius: 8px; box-shadow: 0 3px 10px rgba(155, 89, 182, 0.15);">
+                <img src="RS_logo.png" alt="Racquet Science Logo" onerror="this.src='RS_tennis.jpg'; this.style.height='65px';" style="height: 65px; width: auto; object-fit: contain; border-radius: 8px; padding: 5px; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <div style="flex: 1;">
+                    <h1 style="margin: 0; font-size: 2.6em; font-weight: 700; color: #7d3c98; text-transform: uppercase; letter-spacing: 4px; font-family: 'Trebuchet MS', sans-serif; position: relative; display: inline-block;">
+                        RACQUET SCIENCE
+                        <span style="position: absolute; bottom: -5px; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, transparent, #9b59b6, transparent); border-radius: 2px;"></span>
+                    </h1>
+                </div>
+            </div>
+            -->
+            
+            <!-- Design Option 3: Sporty with Tennis Ball Accent (commented out - uncomment to use) -->
+            <!--
+            <div class="header-design-3" style="display: flex; align-items: center; gap: 20px; margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #ede7f6 0%, #d1c4e9 50%, #b39ddb 100%); border-radius: 15px; box-shadow: 0 5px 20px rgba(179, 157, 219, 0.25); position: relative;">
+                <div style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%); width: 80px; height: 80px; background: radial-gradient(circle, #ffeb3b 30%, #4caf50 30%, #4caf50 100%); border-radius: 50%; opacity: 0.2; border: 3px solid rgba(255,255,255,0.5);"></div>
+                <img src="RS_logo.png" alt="Racquet Science Logo" onerror="this.src='RS_tennis.jpg'; this.style.height='70px';" style="height: 70px; width: auto; object-fit: contain; z-index: 1; filter: drop-shadow(0 3px 10px rgba(0,0,0,0.15));">
+                <div style="flex: 1; z-index: 1;">
+                    <h1 style="margin: 0; font-size: 2.7em; font-weight: 900; color: #6a1b9a; text-transform: uppercase; letter-spacing: 5px; font-family: 'Impact', 'Arial Black', sans-serif; text-shadow: 2px 2px 0px rgba(255,255,255,0.8), 4px 4px 0px rgba(155, 89, 182, 0.3);">
+                        RACQUET<br><span style="color: #8e24aa; letter-spacing: 6px;">SCIENCE</span>
+                    </h1>
+                </div>
+            </div>
+            -->
+            <!-- Session Selector and All Sessions Button -->
+            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;">
+                <div>
+                    <label for="sessionSelector" style="font-weight: 600; margin-right: 10px; color: #7d5ba3;">Session:</label>
+                    <select id="sessionSelector" style="padding: 8px 12px; border-radius: 6px; border: 2px solid #b8a5d9; font-size: 14px; min-width: 300px; background: white; color: #333; transition: border-color 0.2s;" onmouseover="this.style.borderColor='#9b7dd4'" onmouseout="this.style.borderColor='#b8a5d9'">
+                        <option value="">Loading sessions...</option>
+                    </select>
+                </div>
+                <button id="allSessionsBtn" style="padding: 10px 20px; background: linear-gradient(135deg, #9b7dd4 0%, #8b6fc7 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; height: fit-content; box-shadow: 0 2px 8px rgba(155, 125, 212, 0.3); transition: all 0.2s;" onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(155, 125, 212, 0.4)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(155, 125, 212, 0.3)';">
+                    All Sessions Summary
+                </button>
+            </div>
+            <div id="statusMessage" style="padding: 10px; margin-bottom: 10px; background: #e8f5e9; border-radius: 4px; display: none;">
+                <strong>Status:</strong> <span id="statusText">Loading...</span>
+            </div>
+            <!-- Tab Navigation -->
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e0d4f0;">
+                <button id="videoTab" class="tab-button active" style="padding: 10px 20px; background: linear-gradient(135deg, #9b7dd4 0%, #8b6fc7 100%); color: white; border: none; border-radius: 4px 4px 0 0; cursor: pointer; font-weight: 600; box-shadow: 0 -2px 8px rgba(155, 125, 212, 0.2);">
+                    Full Session Analysis
+                </button>
+                <button id="summaryTab" class="tab-button" style="padding: 10px 20px; background: #f0e8ff; color: #7d5ba3; border: none; border-radius: 4px 4px 0 0; cursor: pointer; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='#e8d9f5'; this.style.color='#6b4d93';" onmouseout="this.style.background='#f0e8ff'; this.style.color='#7d5ba3';">
+                    Session Summary
+                </button>
+                <button id="heatMapTab" class="tab-button" style="padding: 10px 20px; background: #f0e8ff; color: #7d5ba3; border: none; border-radius: 4px 4px 0 0; cursor: pointer; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='#e8d9f5'; this.style.color='#6b4d93';" onmouseout="this.style.background='#f0e8ff'; this.style.color='#7d5ba3';">
+                    Zoom in
+                </button>
+            </div>
+        </header>
+
+        <!-- Video Analysis View -->
+        <div id="videoView" class="view-content">
+        <div class="main-content">
+            <!-- Video Section -->
+            <div class="video-section">
+                <video id="videoPlayer" controls preload="auto">
+                    <source id="videoSource" src="" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+                <div style="margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <label style="font-size: 13px; font-weight: 600; color: #7d5ba3;">Speed</label>
+                        <select id="mainVideoSpeedSelect" style="padding: 6px 10px; border-radius: 6px; border: 2px solid #b8a5d9; background: #f5f0ff; color: #333; font-size: 13px; cursor: pointer;">
+                            <option value="0.1">0.1×</option>
+                            <option value="0.2">0.2×</option>
+                            <option value="0.25">0.25×</option>
+                            <option value="0.5">0.5×</option>
+                            <option value="0.75">0.75×</option>
+                            <option value="1" selected>1×</option>
+                            <option value="1.25">1.25×</option>
+                            <option value="1.5">1.5×</option>
+                            <option value="1.75">1.75×</option>
+                            <option value="2">2×</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                        <input type="number" id="mainVideoSpeedInput" min="0.1" max="4" step="0.1" value="1" style="width: 56px; padding: 6px 8px; border-radius: 6px; border: 2px solid #b8a5d9; font-size: 13px;" title="Type custom speed (0.1–4)">
+                    </div>
+                    <span id="mainVideoSpeedDisplay" style="font-size: 13px; font-weight: 600; color: #7d5ba3;">Playback: 1×</span>
+                </div>
+            </div>
+
+            <!-- Max Grip Strength (Calibration) -->
+            <div id="calibrationSection" class="chart-section" style="display: none;">
+                <h2>Max Grip Strength (Calibration)</h2>
+                <div id="calibrationContent" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 10px;">
+                    <div style="background: #f5f0ff; padding: 15px; border-radius: 8px; border: 2px solid #b8a5d9;">
+                        <h3 style="margin: 0 0 10px 0; font-size: 1em; color: #7d5ba3;">Pre-session</h3>
+                        <div id="calibrationPre" style="font-size: 0.95em;"></div>
+                    </div>
+                    <div style="background: #f5f0ff; padding: 15px; border-radius: 8px; border: 2px solid #b8a5d9;">
+                        <h3 style="margin: 0 0 10px 0; font-size: 1em; color: #7d5ba3;">Post-session</h3>
+                        <div id="calibrationPost" style="font-size: 0.95em;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grip Force Chart -->
+            <div class="chart-section">
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+                    <h2 style="margin: 0;">Sum of Grip Force</h2>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <label for="mainGripYAxisSelect" style="font-size: 13px; font-weight: 600; color: #7d5ba3;">Y-Axis Unit:</label>
+                        <select id="mainGripYAxisSelect" style="padding: 6px 10px; border-radius: 6px; border: 2px solid #b8a5d9; font-size: 13px; background: white; color: #333;">
+                            <option value="N">Force (N)</option>
+                            <option value="percent">% max grip (pre-session)</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="gripChartContainer" style="position: relative; height: 300px;">
+                    <canvas id="gripChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Kinematic Efficiency Chart -->
+            <div class="chart-section">
+                <h2>Kinematic Efficiency</h2>
+                <div id="kinematicChartContainer" style="position: relative; height: 300px;">
+                    <canvas id="kinematicChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Acceleration Charts -->
+            <div class="chart-section">
+                <h2>Racquet Motion (IMU)</h2>
+                <div id="racquetChartContainer" style="position: relative; height: 300px;">
+                    <canvas id="racquetChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-section">
+                <h2>Hand Motion (IMU)</h2>
+                <div id="handChartContainer" style="position: relative; height: 300px;">
+                    <canvas id="handChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Pain Notes Section -->
+            <div class="pain-section">
+                <h2>Pain Notes</h2>
+                <div id="painList" class="pain-chips"></div>
+            </div>
+
+            <!-- Stroke Events -->
+            <div class="stroke-section">
+                <h2>Strokes</h2>
+                <div id="strokeList" class="stroke-chips"></div>
+            </div>
+        </div>
+        </div>
+
+        <!-- Session Summary View -->
+        <div id="summaryView" class="view-content" style="display: none;">
+            <div class="summary-container" style="padding: 20px; max-width: 1200px; margin: 0 auto;">
+                <h2 style="margin-top: 0; margin-bottom: 15px;">Session Summary</h2>
+                <div id="summarySectionToggles" style="display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; margin-bottom: 20px; padding: 12px 16px; background: #f5f0ff; border-radius: 8px; border: 1px solid #b8a5d9;">
+                    <span style="font-size: 13px; font-weight: 600; color: #7d5ba3;">Show:</span>
+                    <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;"><input type="checkbox" id="summaryShowStrokeDist" checked> Stroke Type Distribution</label>
+                    <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;"><input type="checkbox" id="summaryShowGripByType" checked> Grip Force Analysis by Stroke Type</label>
+                    <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;"><input type="checkbox" id="summaryShowEfficiencyTrends" checked> Efficiency Trends by Stroke Type</label>
+                    <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;"><input type="checkbox" id="summaryShowGripTrends" checked> Grip Force Trends by Stroke Type</label>
+                    <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;"><input type="checkbox" id="summaryShowEfficiencyByPain" checked> Efficiency & Grip Force by Pain Level</label>
+                </div>
+                
+                <!-- Stroke Type Distribution -->
+                <div id="summarySectionStrokeDist" class="summary-section" style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3>Stroke Type Distribution</h3>
+                    <div style="display: flex; gap: 30px; align-items: center; flex-wrap: wrap; margin-top: 15px;">
+                        <div style="flex: 0 0 300px;">
+                            <canvas id="strokeDistributionChart" style="max-width: 300px; max-height: 300px;"></canvas>
+                        </div>
+                        <div id="strokeDistributionLegend" style="flex: 1; min-width: 200px;">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grip Force by Stroke Type -->
+                <div id="summarySectionGripByType" class="summary-section" style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                        <h3 style="margin: 0;">Grip Force Analysis by Stroke Type</h3>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label for="summaryGripByTypeYAxisSelect" style="font-size: 13px; font-weight: 600; color: #7d5ba3;">Y-Axis Unit:</label>
+                            <select id="summaryGripByTypeYAxisSelect" style="padding: 6px 10px; border-radius: 6px; border: 2px solid #b8a5d9; font-size: 13px; background: white; color: #333;">
+                                <option value="N">Force (N)</option>
+                                <option value="percent">% max grip (pre-session)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="gripByStrokeType" style="margin-top: 15px;">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Efficiency Trends by Stroke Type -->
+                <div id="summarySectionEfficiencyTrends" class="summary-section" style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3>Efficiency Trends by Stroke Type</h3>
+                    <div id="efficiencyTrends" style="margin-top: 15px;">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Grip Force Trends by Stroke Type -->
+                <div id="summarySectionGripTrends" class="summary-section" style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                        <h3 style="margin: 0;">Grip Force Trends by Stroke Type</h3>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label for="summaryGripTrendsYAxisSelect" style="font-size: 13px; font-weight: 600; color: #7d5ba3;">Y-Axis Unit:</label>
+                            <select id="summaryGripTrendsYAxisSelect" style="padding: 6px 10px; border-radius: 6px; border: 2px solid #b8a5d9; font-size: 13px; background: white; color: #333;">
+                                <option value="N">Force (N)</option>
+                                <option value="percent">% max grip (pre-session)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="gripForceTrends" style="margin-top: 15px;">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Efficiency Trends by Pain Level -->
+                <div id="summarySectionEfficiencyByPain" class="summary-section" style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                        <h3 style="margin: 0;">Efficiency & Grip Force Analysis by Pain Level</h3>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label for="summaryGripByPainYAxisSelect" style="font-size: 13px; font-weight: 600; color: #7d5ba3;">Y-Axis Unit:</label>
+                            <select id="summaryGripByPainYAxisSelect" style="padding: 6px 10px; border-radius: 6px; border: 2px solid #b8a5d9; font-size: 13px; background: white; color: #333;">
+                                <option value="N">Force (N)</option>
+                                <option value="percent">% max grip (pre-session)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="efficiencyByPain" style="margin-top: 15px;">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Zoom in on a few strokes: same layout as Video Analysis for a custom time window -->
+        <div id="heatMapView" class="view-content" style="display: none;">
+            <div class="main-content" style="max-width: 1400px; margin: 0 auto;">
+                <h2 style="margin: 0 0 15px 0;">Zoom in on a few strokes</h2>
+                <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap; margin-bottom: 20px; padding: 15px; background: #f5f0ff; border-radius: 8px;">
+                    <label for="heatmapStart">Start (s):</label>
+                    <input type="number" id="heatmapStart" min="0" step="0.5" value="0" style="width: 70px; padding: 8px; border: 2px solid #b8a5d9; border-radius: 6px;">
+                    <label for="heatmapDuration">Duration (s):</label>
+                    <input type="number" id="heatmapDuration" min="0.5" step="0.5" value="5" style="width: 70px; padding: 8px; border: 2px solid #b8a5d9; border-radius: 6px;">
+                    <button id="heatmapLoadBtn" style="padding: 10px 20px; background: linear-gradient(135deg, #9b7dd4 0%, #8b6fc7 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Load</button>
+                    <span id="heatmapStatus" style="color: #7d5ba3; font-size: 0.9em;"></span>
+                </div>
+                <div id="heatmapMiniContent" style="display: none;">
+                    <!-- Video section: same layout as Video Analysis; segment & loop to the right of Speed row -->
+                    <div class="video-section">
+                        <video id="heatMapVideo" preload="auto" style="cursor: pointer;"></video>
+                        <div id="zoomVideoControls" style="display: flex; align-items: center; gap: 12px; margin-top: 8px; flex-wrap: wrap;">
+                            <button type="button" id="zoomVideoPlayPause" style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid #9b7dd4; background: #f5f0ff; color: #7d5ba3; cursor: pointer; font-size: 18px; line-height: 1; padding: 0; display: flex; align-items: center; justify-content: center;">▶</button>
+                            <span id="zoomVideoTime" style="min-width: 80px; font-size: 14px; color: #333;">0:00 / 0:00</span>
+                            <input type="range" id="zoomVideoSeek" min="0" max="100" value="0" step="0.1" style="flex: 1; min-width: 120px; height: 8px; accent-color: #9b7dd4; cursor: pointer;">
+                        </div>
+                        <div style="margin-top: 8px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: space-between;">
+                            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                                <label style="font-size: 13px; font-weight: 600; color: #7d5ba3;">Speed</label>
+                                <select id="zoomVideoSpeedSelect" style="padding: 6px 10px; border-radius: 6px; border: 2px solid #b8a5d9; background: #f5f0ff; color: #333; font-size: 13px; cursor: pointer;">
+                                    <option value="0.1">0.1×</option>
+                                    <option value="0.2">0.2×</option>
+                                    <option value="0.25">0.25×</option>
+                                    <option value="0.5">0.5×</option>
+                                    <option value="0.75">0.75×</option>
+                                    <option value="1" selected>1×</option>
+                                    <option value="1.25">1.25×</option>
+                                    <option value="1.5">1.5×</option>
+                                    <option value="1.75">1.75×</option>
+                                    <option value="2">2×</option>
+                                    <option value="custom">Custom</option>
+                                </select>
+                                <input type="number" id="zoomVideoSpeedInput" min="0.1" max="4" step="0.1" value="1" style="width: 56px; padding: 6px 8px; border-radius: 6px; border: 2px solid #b8a5d9; font-size: 13px;" title="Type custom speed (0.1–4)">
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                                <span id="zoomVideoSegmentLabel" style="font-size: 0.9em; color: #666;"></span>
+                                <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.9em; color: #555;">
+                                    <input type="checkbox" id="zoomVideoLoop" style="cursor: pointer;">
+                                    Loop segment
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Sum of Grip Force: same chart section as Video Analysis -->
+                    <div class="chart-section">
+                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+                            <h2 style="margin: 0;">Sum of Grip Force</h2>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <label for="zoomGripYAxisSelect" style="font-size: 13px; font-weight: 600; color: #7d5ba3;">Y-Axis Unit:</label>
+                                <select id="zoomGripYAxisSelect" style="padding: 6px 10px; border-radius: 6px; border: 2px solid #b8a5d9; font-size: 13px; background: white; color: #333;">
+                                    <option value="N">Force (N)</option>
+                                    <option value="percent">% max grip (pre-session)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="heatMapGripChartContainer" class="zoom-chart-container" style="position: relative; height: 300px;">
+                            <canvas id="heatMapGripChart"></canvas>
+                        </div>
+                    </div>
+                    <!-- Grip Force Heatmap (4×10) — raw at current time -->
+                    <div class="chart-section" style="padding: 15px; background: #f9f9f9; border-radius: 8px;">
+                        <h2 style="margin: 0 0 15px 0;">Grip Force Heatmap (4×10)</h2>
+                        <div style="display: flex; gap: 20px; align-items: flex-start; justify-content: center; flex-wrap: wrap; margin-bottom: 5px;">
+                            <div id="heatmapGrid" style="display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; flex: 1; min-width: 0; max-width: 100%;"></div>
+                            <div id="heatmapScale" style="display: flex; flex-direction: column; align-items: center; min-width: 80px;">
+                                <div style="font-size: 0.85em; font-weight: 600; margin-bottom: 5px; color: #333;">Force (N)</div>
+                                <div style="display: flex; flex-direction: column; align-items: center;">
+                                    <span id="scaleMax" style="font-size: 0.85em; font-weight: 600; color: #333; margin-bottom: 5px;">0</span>
+                                    <div id="scaleGradient" style="width: 30px; height: 200px; border: 1px solid #333;"></div>
+                                    <span id="scaleMin" style="font-size: 0.85em; font-weight: 600; color: #333; margin-top: 5px;">0</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="text-align: center; font-size: 0.9em; color: #666; margin-top: 8px;">
+                            <span id="heatmapWindowLabel">Time: <span id="heatmapTime">0.00</span>s</span>
+                        </div>
+                    </div>
+                    <!-- Kinematic Efficiency: same chart section as Video Analysis -->
+                    <div class="chart-section">
+                        <h2>Kinematic Efficiency</h2>
+                        <div id="heatMapKinematicChartContainer" class="zoom-chart-container" style="position: relative; height: 300px;">
+                            <canvas id="heatMapKinematicChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div id="heatmapPlaceholder" style="padding: 40px; text-align: center; color: #888;">
+                    Set start and duration, then click Load to zoom in on a few strokes (video, grip, heat map, efficiency).
+                </div>
+            </div>
+        </div>
+
+        <!-- All Sessions Summary View -->
+        <div id="allSessionsView" class="view-content" style="display: none;">
+            <div class="summary-container" style="padding: 20px; max-width: 1200px; margin: 0 auto;">
+                <h2 style="margin-top: 0;">All Sessions Summary</h2>
+                
+                <!-- Max Grip Strength (Pre vs Post) by Session -->
+                <div class="summary-section" style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3>Max Grip Strength (Pre vs Post) by Session</h3>
+                    <div style="height: 300px; margin-top: 15px;">
+                        <canvas id="allSessionsCalibrationChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Average Grip Force by Stroke Type -->
+                <div class="summary-section" style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                        <h3 style="margin: 0;">Average Grip Force by Stroke Type</h3>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label for="allSessionsGripYAxisSelect" style="font-size: 13px; font-weight: 600; color: #7d5ba3;">Y-Axis Unit:</label>
+                            <select id="allSessionsGripYAxisSelect" style="padding: 6px 10px; border-radius: 6px; border: 2px solid #b8a5d9; font-size: 13px; background: white; color: #333;">
+                                <option value="N">Force (N)</option>
+                                <option value="percent">% max grip (pre-session)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="height: 300px; margin-top: 15px;">
+                        <canvas id="allSessionsGripForceChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Average Duration > 100N -->
+                <div class="summary-section" style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3>Average Duration > 100N by Stroke Type</h3>
+                    <div style="height: 300px; margin-top: 15px;">
+                        <canvas id="allSessionsDurationChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Average Efficiency -->
+                <div class="summary-section" style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3>Average Efficiency by Stroke Type</h3>
+                    <div style="height: 300px; margin-top: 15px;">
+                        <canvas id="allSessionsEfficiencyChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Efficiency Drop (First Half vs Second Half) -->
+                <div class="summary-section" style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3>Efficiency Drop (First Half - Second Half) by Stroke Type</h3>
+                    <div style="height: 300px; margin-top: 15px;">
+                        <canvas id="allSessionsEfficiencyDropChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Max Force Drop -->
+                <div class="summary-section" style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3>Max Force Drop (First Half - Second Half) by Stroke Type</h3>
+                    <div style="height: 300px; margin-top: 15px;">
+                        <canvas id="allSessionsMaxForceDropChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Duration > 100N Drop -->
+                <div class="summary-section" style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3>Duration > 100N Drop (First Half - Second Half) by Stroke Type</h3>
+                    <div style="height: 300px; margin-top: 15px;">
+                        <canvas id="allSessionsDurationDropChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+      }
+    </script>
+</body>
+</html>

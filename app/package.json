@@ -21,8 +21,12 @@
     "@capacitor/ios": "^7.4.4",
     "@capacitor/splash-screen": "latest",
     "@vitejs/plugin-react": "^5.1.2",
+    "chart.js": "^4.5.1",
+    "chartjs-plugin-annotation": "^3.1.0",
     "date-fns": "^4.1.0",
+    "framer-motion": "^12.34.3",
     "react": "^19.2.3",
+    "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.3",
     "react-router-dom": "^7.12.0",
     "uuid": "^13.0.0"

@@ -1,6 +1,6 @@
 {
   "appId": "com.ashleyc.app",
-  "appName": "test-capacitor",
+  "appName": "Racket Science",
   "webDir": "dist",
   "plugins": {
     "SplashScreen": {

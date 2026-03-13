@@ -24,7 +24,13 @@
 		B6677A062EDD357D00C3B52B /* CapacitorCommunityBluetoothLe.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B6677A052EDD357D00C3B52B /* CapacitorCommunityBluetoothLe.framework */; };
 		B6677A082EDD357D00C3B52B /* CapacitorSplashScreen.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B6677A072EDD357D00C3B52B /* CapacitorSplashScreen.framework */; };
 		B6677A0A2EDD357D00C3B52B /* Cordova.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B6677A092EDD357D00C3B52B /* Cordova.framework */; };
+		B676B24A2F3A7CC1006D4563 /* AudioPlaybackManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B676B2492F3A7CC1006D4563 /* AudioPlaybackManager.swift */; };
+		B676B2B22F3AB540006D4563 /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = B676B2B12F3AB52F006D4563 /* capacitor.config.json */; };
+		B67718D72F61A83400FE0A2E /* Combine.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B67718D62F61A83400FE0A2E /* Combine.framework */; };
 		B698F7BD2EDD258900A5CE11 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B698F7BC2EDD258900A5CE11 /* WatchConnectivityManager.swift */; };
+		B6AA11002F4B8A00001D3F11 /* VideoRecordingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6AA10FF2F4B8A00001D3F11 /* VideoRecordingManager.swift */; };
+		B6AA11022F4B8A10001D3F11 /* VideoRecordingPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6AA11012F4B8A10001D3F11 /* VideoRecordingPlugin.swift */; };
+		B6CC11042F61B00000AABBCC /* MotionBinaryCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6CC11032F61B00000AABBCC /* MotionBinaryCodec.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -78,13 +84,21 @@
 		B6677A052EDD357D00C3B52B /* CapacitorCommunityBluetoothLe.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = CapacitorCommunityBluetoothLe.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		B6677A072EDD357D00C3B52B /* CapacitorSplashScreen.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = CapacitorSplashScreen.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		B6677A092EDD357D00C3B52B /* Cordova.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Cordova.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		B676B2492F3A7CC1006D4563 /* AudioPlaybackManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlaybackManager.swift; sourceTree = "<group>"; };
+		B676B2B12F3AB52F006D4563 /* capacitor.config.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
+		B67718D62F61A83400FE0A2E /* Combine.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Combine.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS26.2.sdk/System/Library/Frameworks/Combine.framework; sourceTree = DEVELOPER_DIR; };
 		B698F7BC2EDD258900A5CE11 /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityManager.swift; sourceTree = "<group>"; };
+		B6AA10FF2F4B8A00001D3F11 /* VideoRecordingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoRecordingManager.swift; sourceTree = "<group>"; };
+		B6AA11012F4B8A10001D3F11 /* VideoRecordingPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoRecordingPlugin.swift; sourceTree = "<group>"; };
+		B6CC11032F61B00000AABBCC /* MotionBinaryCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionBinaryCodec.swift; sourceTree = "<group>"; };
 		BA0BABCEF341CC597E84A3F2 /* Pods_App.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_App.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		B659B8B92EDD0A1A0041DAE1 /* Watchkit App Watch App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = "Watchkit App Watch App";
 			sourceTree = "<group>";
 		};
@@ -108,6 +122,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B67718D72F61A83400FE0A2E /* Combine.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -137,10 +152,15 @@
 		504EC3061FED79650016851F /* App */ = {
 			isa = PBXGroup;
 			children = (
+				B676B2B12F3AB52F006D4563 /* capacitor.config.json */,
+				B676B2492F3A7CC1006D4563 /* AudioPlaybackManager.swift */,
 				B6421BF42F2948E3007C3975 /* MyViewController.swift */,
 				B6442D592EDD2C4F002CCEC5 /* WatchMotionPlugin.swift */,
 				B6442D562EDD2C3F002CCEC5 /* WatchMotionPlugin.m */,
 				B698F7BC2EDD258900A5CE11 /* WatchConnectivityManager.swift */,
+				B6CC11032F61B00000AABBCC /* MotionBinaryCodec.swift */,
+				B6AA10FF2F4B8A00001D3F11 /* VideoRecordingManager.swift */,
+				B6AA11012F4B8A10001D3F11 /* VideoRecordingPlugin.swift */,
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
 				504EC3071FED79650016851F /* AppDelegate.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
@@ -166,6 +186,7 @@
 		D0CDD77AE0643B6F579F60CF /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				B67718D62F61A83400FE0A2E /* Combine.framework */,
 				B64E95462EDD5371009FCD50 /* Capacitor.framework */,
 				B64E95472EDD5371009FCD50 /* CapacitorCamera.framework */,
 				B64E95482EDD5371009FCD50 /* CapacitorCommunityBluetoothLe.framework */,
@@ -271,6 +292,7 @@
 			files = (
 				504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */,
 				50B271D11FEDC1A000F3C39B /* public in Resources */,
+				B676B2B22F3AB540006D4563 /* capacitor.config.json in Resources */,
 				504EC30F1FED79650016851F /* Assets.xcassets in Resources */,
 				50379B232058CBB4000EE86E /* capacitor.config.json in Resources */,
 				504EC30D1FED79650016851F /* Main.storyboard in Resources */,
@@ -317,12 +339,8 @@
 			);
 			inputFileListPaths = (
 			);
-			inputPaths = (
-			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
-			);
-			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -341,6 +359,10 @@
 				B6442D5A2EDD2C4F002CCEC5 /* WatchMotionPlugin.swift in Sources */,
 				B6421BF52F2948E3007C3975 /* MyViewController.swift in Sources */,
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
+				B676B24A2F3A7CC1006D4563 /* AudioPlaybackManager.swift in Sources */,
+				B6CC11042F61B00000AABBCC /* MotionBinaryCodec.swift in Sources */,
+				B6AA11002F4B8A00001D3F11 /* VideoRecordingManager.swift in Sources */,
+				B6AA11022F4B8A10001D3F11 /* VideoRecordingPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -560,6 +582,7 @@
 				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CODE_SIGN_ENTITLEMENTS = "Watchkit App Watch App/Watchkit App Watch App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = UD66MVR5Z3;
@@ -569,6 +592,9 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Watchkit-App-Watch-App-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Watchkit App";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "This app uses HealthKit to keep the app running during tennis sessions.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "This app records tennis workouts to Apple Health.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app records audio during practice sessions to sync with motion data.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "This app needs access to motion data to track your movements.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.ashleyc.app;
@@ -608,6 +634,7 @@
 				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CODE_SIGN_ENTITLEMENTS = "Watchkit App Watch App/Watchkit App Watch App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = UD66MVR5Z3;
@@ -617,6 +644,9 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Watchkit-App-Watch-App-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Watchkit App";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "This app uses HealthKit to keep the app running during tennis sessions.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "This app records tennis workouts to Apple Health.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app records audio during practice sessions to sync with motion data.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "This app needs access to motion data to track your movements.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.ashleyc.app;

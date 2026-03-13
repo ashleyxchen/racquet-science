@@ -1,0 +1,452 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    padding: 12px;
+    color: #333;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    padding: 14px;
+}
+
+header {
+    margin-bottom: 12px;
+    border-bottom: 2px solid #e0e0e0;
+    padding-bottom: 12px;
+}
+
+header h1 {
+    color: #2c3e50;
+    margin-bottom: 8px;
+    font-size: 1.4em;
+}
+
+.controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+#playPauseBtn {
+    padding: 10px 20px;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background 0.3s;
+}
+
+#playPauseBtn:hover {
+    background: #2980b9;
+}
+
+#timeSlider {
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    background: #ddd;
+    outline: none;
+}
+
+#timeSlider::-webkit-slider-thumb {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #3498db;
+    cursor: pointer;
+}
+
+#timeDisplay {
+    min-width: 92px;
+    text-align: right;
+    font-weight: 500;
+}
+
+.main-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.video-section {
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 8px;
+    border: 2px solid #e0e0e0;
+}
+
+#videoPlayer,
+#heatMapVideo {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+#heatMapGripChartContainer,
+#heatMapKinematicChartContainer {
+    width: 100%;
+    height: 300px;
+    position: relative;
+}
+
+#heatMapView .chart-section canvas {
+    height: 300px !important;
+}
+
+.window-selector {
+    background: #f0f4ff;
+    padding: 10px;
+    border-radius: 8px;
+    border: 2px solid #9b59b6;
+}
+
+.window-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.window-selector label {
+    font-weight: 600;
+    color: #7d3c98;
+}
+
+.window-selector input[type="number"] {
+    padding: 8px 12px;
+    border: 2px solid #9b59b6;
+    border-radius: 6px;
+    font-size: 14px;
+    width: 92px;
+}
+
+.window-sep{
+    color:#7d3c98;
+    font-weight:700;
+}
+
+#applyWindow {
+    padding: 8px 20px;
+    background: #9b59b6;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.3s;
+}
+
+#applyWindow:hover {
+    background: #7d3c98;
+}
+
+.secondary{
+    padding: 8px 14px;
+    background: transparent;
+    color: #7d3c98;
+    border: 2px solid #9b59b6;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.stroke-section {
+    background: #fff5e6;
+    padding: 10px;
+    border-radius: 8px;
+    border: 2px solid #ff9800;
+}
+
+.stroke-section h2 {
+    color: #ff9800;
+    margin-bottom: 8px;
+    font-size: 1.05em;
+}
+
+.pain-section {
+    background: #fff3cd;
+    border: 2px solid #ffc107;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.pain-section h2 {
+    color: #856404;
+    margin-bottom: 12px;
+    font-size: 1.2em;
+}
+
+.pain-input {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.pain-input label {
+    font-weight: 600;
+    color: #856404;
+}
+
+.pain-input input {
+    padding: 8px;
+    border: 1px solid #ffc107;
+    border-radius: 4px;
+    width: 80px;
+}
+
+.pain-input button {
+    padding: 8px 16px;
+    background: #ffc107;
+    color: #856404;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.3s;
+}
+
+.pain-input button:hover {
+    background: #ffb300;
+}
+
+.pain-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.pain-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: white;
+    border: 2px solid #ffc107;
+    border-radius: 20px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 0.9em;
+}
+
+.pain-chip:hover {
+    background: #fff9e6;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
+}
+
+.pain-time {
+    font-weight: 600;
+    color: #856404;
+}
+
+.pain-level {
+    color: #d68910;
+    font-weight: 600;
+}
+
+.pain-delete {
+    background: #ffc107;
+    color: #856404;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0;
+    margin-left: 4px;
+    transition: background 0.2s;
+}
+
+.pain-delete:hover {
+    background: #ff9800;
+    color: white;
+}
+
+.stroke-chips{
+    display:flex;
+    gap:10px;
+    overflow-x:auto;
+    padding-bottom:4px;
+    min-height:44px;
+}
+
+.stroke-chip{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding: 10px 12px;
+    background: white;
+    border-radius: 6px;
+    border: 2px solid rgba(0,0,0,0.08);
+    min-width: 180px;
+    cursor:pointer;
+    user-select:none;
+}
+
+.stroke-chip.backhand {
+    border-color: rgba(155, 89, 182, 0.35);
+}
+
+.stroke-chip.forehand {
+    border-color: rgba(230, 126, 34, 0.35);
+}
+
+.stroke-chip.serve {
+    border-color: rgba(39, 174, 96, 0.35);
+}
+
+.stroke-time {
+    font-weight: 600;
+    color: #555;
+}
+
+.stroke-type {
+    padding: 4px 14px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.stroke-type.backhand {
+    background: #9b59b6;
+    color: white;
+}
+
+.stroke-type.forehand {
+    background: #e67e22;
+    color: white;
+}
+
+.stroke-type.serve {
+    background: #27ae60;
+    color: white;
+}
+
+.chart-section {
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 8px;
+    border: 2px solid #e0e0e0;
+}
+
+.chart-section h2 {
+    margin-bottom: 15px;
+    font-size: 1.3em;
+}
+
+.chart-section h2:nth-of-type(2) {
+    color: #27ae60;
+}
+
+.chart-section h2:nth-of-type(3) {
+    color: #e74c3c;
+}
+
+.chart-section h2:nth-of-type(4) {
+    color: #9b59b6;
+}
+
+.chart-section canvas {
+    max-width: 100%;
+    height: 300px !important;
+    cursor: crosshair;
+}
+
+#gripChartContainer,
+#racquetChartContainer,
+#handChartContainer {
+    width: 100%;
+    height: 300px;
+    position: relative;
+}
+
+.chart-section {
+    position: relative;
+}
+
+.chart-section::after {
+    content: 'Click anywhere on chart to seek video';
+    position: absolute;
+    bottom: 5px;
+    right: 10px;
+    font-size: 11px;
+    color: #666;
+    pointer-events: none;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+/* Calibration section has no seek-on-chart feature */
+#calibrationSection::after {
+    content: none;
+}
+
+/* Mobile-first tweaks */
+@media (max-width: 640px) {
+    body { padding: 0; background: #eef2ff; }
+    .container {
+        border-radius: 0;
+        padding: calc(12px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));
+        min-height: 100vh;
+    }
+    header {
+        position: sticky;
+        top: 0;
+        background: white;
+        z-index: 50;
+        padding-top: 10px;
+    }
+    .controls { gap: 10px; }
+    #playPauseBtn { padding: 10px 14px; }
+    #timeDisplay { min-width: 86px; font-size: 13px; }
+    .chart-section h2 { font-size: 1.05em; margin-bottom: 8px; }
+    #gripChartContainer, #racquetChartContainer, #handChartContainer { height: 180px; }
+    .chart-section canvas { height: 180px !important; }
+    .window-selector input[type="number"]{ width: 84px; }
+}
+
+/* Stroke markers on charts */
+.stroke-marker {
+    position: absolute;
+    width: 2px;
+    background: #ff9800;
+    opacity: 0.7;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.stroke-marker.backhand {
+    background: #e74c3c;
+}
+
+.stroke-marker.forehand {
+    background: #27ae60;
+}
+
+.stroke-marker.serve {
+    background: #3498db;
+}
+

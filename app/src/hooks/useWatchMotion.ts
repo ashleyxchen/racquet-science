@@ -13,17 +13,31 @@ interface FormattedMotionData {
   orientation: { roll: string; pitch: string; yaw: string };
 }
 
+interface RecordingControlData {
+  action: 'START' | 'STOP';
+  timestamp: number;
+}
+
 interface WatchMotionPlugin {
   isWatchConnected(): Promise<{ connected: boolean }>;
   getMotionData(): Promise<MotionData>;
   startListening(): Promise<{ status: string }>;
+  startWatchRecording(options: { sessionId: string }): Promise<{ success: boolean; error?: string }>;
+  stopWatchRecording(): Promise<{ success: boolean; error?: string }>;
   addListener(
     eventName: 'motionData',
     callback: (data: MotionData) => void
   ): Promise<{ remove: () => void }>;
+  addListener(
+    eventName: 'recordingControl',
+    callback: (data: RecordingControlData) => void
+  ): Promise<{ remove: () => void }>;
 }
 
 const WatchMotion = registerPlugin<WatchMotionPlugin>('WatchMotion');
+
+// Export the WatchMotion plugin for direct use
+export { WatchMotion };
 
 export function formatMotionData(data: MotionData | null): FormattedMotionData {
   if (!data || !data.accel || !data.gyro || !data.orientation) {

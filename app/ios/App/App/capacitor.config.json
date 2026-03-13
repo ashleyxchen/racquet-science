@@ -1,0 +1,17 @@
+{
+	"appId": "com.ashleyc.app",
+	"appName": "Racket Science",
+	"webDir": "dist",
+	"plugins": {
+		"SplashScreen": {
+			"launchAutoHide": false
+		}
+	},
+	"packageClassList": [
+		"BluetoothLe",
+		"CapacitorSQLitePlugin",
+		"CAPCameraPlugin",
+		"FilesystemPlugin",
+		"SplashScreenPlugin"
+	]
+}

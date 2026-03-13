@@ -1,9 +1,13 @@
 /**
  * RecordingActiveStep - Active recording display with stop control
+ *
+ * NOTE: Recording state is managed by the native RecordingStateMachine.
+ * This component can optionally use useRecordingState for more accurate timing.
  */
 
 import { useState, useEffect } from 'react';
 import { WizardStepProps } from '../../types/recordingWizard';
+import { useRecordingState } from '../../hooks/useRecordingState';
 
 interface RecordingActiveStepProps extends WizardStepProps {
   onStopRecording: () => void;
@@ -63,16 +67,38 @@ function CameraSwitchIcon() {
 }
 
 export function RecordingActiveStep({ state, onStopRecording, onSwitchCamera, cameraPosition = 'back', videoPreviewElement, onUpdateOverlay }: RecordingActiveStepProps) {
-  const [elapsedMs, setElapsedMs] = useState(0);
+  // Use native state machine for accurate elapsed time
+  const recordingState = useRecordingState();
+
+  // Use state machine's elapsedMs if available, otherwise fall back to local calculation
+  const [localElapsedMs, setLocalElapsedMs] = useState(0);
+  const elapsedMs = recordingState.elapsedMs > 0 ? recordingState.elapsedMs : localElapsedMs;
+
   const { recording, devices, plannedDuration } = state;
 
-  // Update elapsed time
+  // Use state machine's isRecording if available
+  const isRecording = recordingState.isRecording || recording.isRecording;
+  const startTime = recordingState.context.startTime || recording.startTime;
+
+  // Update elapsed time (fallback when state machine isn't providing it)
   useEffect(() => {
-    if (!recording.isRecording || !recording.startTime) return;
+    // Skip if state machine is providing elapsedMs
+    if (recordingState.elapsedMs > 0) {
+      // Still update native overlay from state machine elapsed time
+      if (onUpdateOverlay && recordingState.isRecording) {
+        const elapsedSeconds = Math.floor(recordingState.elapsedMs / 1000);
+        const totalSeconds = plannedDuration * 60;
+        onUpdateOverlay({ elapsedSeconds, totalSeconds });
+      }
+      return;
+    }
+
+    // Fallback: calculate locally
+    if (!isRecording || !startTime) return;
 
     const interval = setInterval(() => {
-      const elapsed = Date.now() - recording.startTime!;
-      setElapsedMs(elapsed);
+      const elapsed = Date.now() - startTime;
+      setLocalElapsedMs(elapsed);
 
       // Update native overlay
       if (onUpdateOverlay) {
@@ -83,7 +109,7 @@ export function RecordingActiveStep({ state, onStopRecording, onSwitchCamera, ca
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [recording.isRecording, recording.startTime, plannedDuration, onUpdateOverlay]);
+  }, [isRecording, startTime, plannedDuration, onUpdateOverlay, recordingState.elapsedMs, recordingState.isRecording]);
 
   // Calculate remaining time
   const plannedMs = plannedDuration * 60 * 1000;

@@ -26,6 +26,8 @@ class MyViewController: CAPBridgeViewController {
         NSLog("🔌 MyViewController: WatchMotionPlugin registered")
         bridge?.registerPluginInstance(VideoRecordingPlugin())
         NSLog("🔌 MyViewController: VideoRecordingPlugin registered")
+        bridge?.registerPluginInstance(RecordingStateMachinePlugin())
+        NSLog("🔌 MyViewController: RecordingStateMachinePlugin registered")
 
         // Configure webview for transparency support
         if let webView = self.webView {

@@ -18,8 +18,13 @@ class VideoRecordingManager: NSObject {
     private var currentSessionId: String?
     private var recordingStartTime: Date?
 
-    private var isRecording = false
     private var videoOutputURL: URL?
+
+    /// Recording state derived from AVFoundation - single source of truth
+    /// This eliminates the possibility of state desync between our flag and AVFoundation
+    var isRecording: Bool {
+        return videoOutput?.isRecording ?? false
+    }
     private var currentCameraPosition: AVCaptureDevice.Position = .back  // Default to back camera
 
     // Callback for status updates
@@ -152,7 +157,11 @@ class VideoRecordingManager: NSObject {
     /// - Parameter sessionId: Unique session identifier
     /// - Throws: Recording errors
     func startRecording(sessionId: String) throws {
+        NSLog("🎥 VideoRecordingManager: startRecording called for session \(sessionId)")
+        NSLog("🎥 VideoRecordingManager: Current state - isRecording (AVFoundation)=\(isRecording)")
+
         guard !isRecording else {
+            NSLog("🎥❌ VideoRecordingManager: BLOCKED - AVFoundation is already recording!")
             throw VideoRecordingError.alreadyRecording
         }
 
@@ -221,7 +230,6 @@ class VideoRecordingManager: NSObject {
         currentSessionId = sessionId
         recordingStartTime = Date()
         videoOutputURL = videoURL
-        isRecording = true
 
         NSLog("🎥 VideoRecordingManager: Recording started to \(videoURL.path)")
         onRecordingStarted?()
@@ -252,15 +260,13 @@ class VideoRecordingManager: NSObject {
             throw VideoRecordingError.noOutputFile
         }
 
-        isRecording = false
-
         return (url: videoURL, durationMs: durationMs)
     }
 
     /// Stop the current recording and wait for file to be written
     /// - Parameter completion: Called when file is ready with Result containing (url, durationMs) or error
     func stopRecordingAsync(completion: @escaping (Result<(url: URL, durationMs: Int), Error>) -> Void) {
-        NSLog("🎥 VideoRecordingManager: stopRecordingAsync called, isRecording=\(isRecording), videoOutputURL=\(videoOutputURL?.path ?? "nil")")
+        NSLog("🎥 VideoRecordingManager: stopRecordingAsync called, isRecording (AVFoundation)=\(isRecording), videoOutputURL=\(videoOutputURL?.path ?? "nil")")
 
         // First, check if we have a valid video file (handles double-stop gracefully)
         if let videoURL = videoOutputURL, FileManager.default.fileExists(atPath: videoURL.path) {
@@ -293,9 +299,6 @@ class VideoRecordingManager: NSObject {
 
         // Store completion handler to be called when delegate fires
         self.stopRecordingCompletion = completion
-
-        // Mark as not recording immediately to prevent double-stop
-        isRecording = false
 
         // This triggers the delegate callback when file is actually written
         videoOutput.stopRecording()
@@ -334,8 +337,32 @@ class VideoRecordingManager: NSObject {
         previewLayer = nil
         currentSessionId = nil
         recordingStartTime = nil
-        isRecording = false
         stopRecordingCompletion = nil
+    }
+
+    /// Force reset recording state without stopping capture session
+    /// Use this to recover from stuck recording state
+    func forceResetRecordingState() {
+        NSLog("🎥 VideoRecordingManager: Force resetting recording state")
+        NSLog("🎥 VideoRecordingManager: Current isRecording (AVFoundation)=\(isRecording), videoOutputURL=\(videoOutputURL?.path ?? "nil")")
+
+        // Stop any active AVFoundation recording (check AVFoundation's state, not our flag)
+        // This handles the case where our flag got out of sync with AVFoundation
+        if videoOutput?.isRecording == true {
+            NSLog("🎥 VideoRecordingManager: AVFoundation is still recording - stopping it")
+            videoOutput?.stopRecording()
+
+            // Give AVFoundation a moment to process the stop
+            Thread.sleep(forTimeInterval: 0.1)
+        }
+
+        // Reset state
+        currentSessionId = nil
+        recordingStartTime = nil
+        videoOutputURL = nil
+        stopRecordingCompletion = nil
+
+        NSLog("🎥 VideoRecordingManager: Recording state reset complete")
     }
 
     // MARK: - Private Methods
@@ -493,6 +520,12 @@ extension VideoRecordingManager: AVCaptureFileOutputRecordingDelegate {
         let duration = recordingStartTime.map { Date().timeIntervalSince($0) } ?? 0
         let durationMs = Int(duration * 1000)
 
+        // Get file attributes for validation
+        let fileExists = FileManager.default.fileExists(atPath: outputFileURL.path)
+        let fileSize = (try? FileManager.default.attributesOfItem(atPath: outputFileURL.path)[.size] as? Int64) ?? 0
+
+        NSLog("🎥 Recording delegate - fileExists: \(fileExists), fileSize: \(fileSize) bytes, duration: \(durationMs)ms")
+
         if let error = error {
             let nsError = error as NSError
             NSLog("🎥 Recording delegate received error - domain: \(nsError.domain), code: \(nsError.code), description: \(error.localizedDescription)")
@@ -501,15 +534,14 @@ extension VideoRecordingManager: AVCaptureFileOutputRecordingDelegate {
             // Common codes that are actually success:
             // -11806: AVErrorRecordingSuccessfullyFinished
             // -11818: AVErrorSessionWasInterrupted (can happen on normal stop too)
-            // We should check if the file exists and has content - that's the real success indicator
-            let fileExists = FileManager.default.fileExists(atPath: outputFileURL.path)
+            // We should check if the file exists with valid content - that's the real success indicator
 
-            if fileExists {
-                // File was written successfully - treat as success regardless of error code
-                NSLog("🎥 Recording finished with 'error' but file exists - treating as success")
+            if fileExists && fileSize > 1000 {
+                // File was written successfully with meaningful size - treat as success
+                NSLog("🎥 Recording finished with 'error' but valid file exists (\(fileSize) bytes) - treating as success")
             } else {
-                // File doesn't exist - this is a real error
-                NSLog("🎥 Recording finished with error and NO file: \(error.localizedDescription)")
+                // File doesn't exist or is too small - this is a real error
+                NSLog("🎥 Recording finished with error and invalid file (exists: \(fileExists), size: \(fileSize))")
                 onRecordingError?(error)
                 stopRecordingCompletion?(.failure(error))
                 stopRecordingCompletion = nil
@@ -517,11 +549,17 @@ extension VideoRecordingManager: AVCaptureFileOutputRecordingDelegate {
             }
         }
 
-        NSLog("🎥 Recording finished successfully. Duration: \(duration)s, File: \(outputFileURL.path)")
+        // Final validation - ensure file exists and has content
+        if !fileExists || fileSize < 1000 {
+            NSLog("🎥 ERROR: Video file invalid after recording (exists: \(fileExists), size: \(fileSize))")
+            let error = VideoRecordingError.noOutputFile
+            onRecordingError?(error)
+            stopRecordingCompletion?(.failure(error))
+            stopRecordingCompletion = nil
+            return
+        }
 
-        // Verify file exists
-        let fileExists = FileManager.default.fileExists(atPath: outputFileURL.path)
-        NSLog("🎥 Video file exists: \(fileExists)")
+        NSLog("🎥 Recording finished successfully. Duration: \(duration)s, File: \(outputFileURL.path), Size: \(fileSize) bytes")
 
         // Store the URL for potential future access
         self.videoOutputURL = outputFileURL

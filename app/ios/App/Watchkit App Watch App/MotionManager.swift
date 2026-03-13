@@ -37,6 +37,7 @@ class MotionManager: NSObject, WCSessionDelegate, ObservableObject {
     // Recording state
     @Published var isRecording = false
     @Published var isRemoteControlled = false  // True when iOS controls recording
+    @Published var remoteRecordingState: String = "idle"  // Authoritative state from iOS
     private(set) var recordingStartTime: Date?
     private var currentSessionId: String?
 
@@ -358,6 +359,67 @@ class MotionManager: NSObject, WCSessionDelegate, ObservableObject {
         }
     }
 
+    // MARK: - Recording State Updates from iOS
+
+    /// Handle recording state updates from iOS (single source of truth)
+    private func handleRecordingStateUpdate(_ message: [String: Any]) {
+        guard let state = message["state"] as? String else {
+            print("⚠️ Recording state update missing state field")
+            return
+        }
+
+        let sessionId = message["sessionId"] as? String
+        let plannedDuration = message["plannedDuration"] as? Int
+
+        print("📱 Watch received recording state: \(state)")
+        print("   - Session ID: \(sessionId ?? "none")")
+        print("   - Planned Duration: \(plannedDuration ?? 0) min")
+
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+
+            // Update authoritative state from iOS
+            self.remoteRecordingState = state
+
+            // Sync local state based on iOS state
+            switch state {
+            case "recording":
+                if !self.isRecording {
+                    // iOS says we're recording but Watch isn't - start motion collection
+                    print("📱 Watch syncing to RECORDING state from iOS")
+                    self.startMotionUpdates(isRemote: true, sessionId: sessionId, plannedDuration: plannedDuration ?? 0)
+                    self.uiState = .recording
+                }
+
+            case "idle", "stopping":
+                if self.isRecording {
+                    // iOS says idle/stopping but Watch is recording - stop motion collection
+                    print("📱 Watch syncing to IDLE/STOPPING state from iOS")
+                    self.stopMotionUpdates(endWorkout: true)
+                    self.uiState = .ready
+                    self.canStartRecording = false
+                }
+
+            case "starting":
+                // iOS is starting - update UI to show transitioning
+                print("📱 Watch syncing to STARTING state from iOS")
+                self.uiState = .recording  // Show recording UI while starting
+
+            case "error":
+                // iOS encountered an error - stop and show ready state
+                print("📱 Watch syncing to ERROR state from iOS")
+                if self.isRecording {
+                    self.stopMotionUpdates(endWorkout: true)
+                }
+                self.uiState = .ready
+                self.canStartRecording = false
+
+            default:
+                print("⚠️ Unknown recording state: \(state)")
+            }
+        }
+    }
+
     // MARK: - Recording Control from Watch
 
     func sendRecordingControl(action: String) {
@@ -468,6 +530,9 @@ class MotionManager: NSObject, WCSessionDelegate, ObservableObject {
         case "calibration":
             handleCalibrationCommand(message)
 
+        case "recording_state":
+            handleRecordingStateUpdate(message)
+
         default:
             print("⚠️ Unknown message type: \(type)")
         }
@@ -500,6 +565,14 @@ class MotionManager: NSObject, WCSessionDelegate, ObservableObject {
             replyHandler([
                 "status": "ok",
                 "command": command
+            ])
+
+        case "recording_state":
+            handleRecordingStateUpdate(message)
+            let state = message["state"] as? String ?? ""
+            replyHandler([
+                "status": "ok",
+                "state": state
             ])
 
         default:

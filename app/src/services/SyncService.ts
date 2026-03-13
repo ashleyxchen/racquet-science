@@ -148,14 +148,18 @@ export async function syncSession(
       message: 'Creating session on server...',
     });
 
+    const sessionMetadata = metadata ? {
+      ...metadata,
+      local_session_id: localSession.sessionId,
+    } : {
+      local_session_id: localSession.sessionId,
+    };
+
+    console.log(`[SyncService] Creating session with metadata:`, sessionMetadata);
+
     const backendSession = await createSession({
       started_at: new Date(localSession.startTime).toISOString(),
-      session_metadata: metadata ? {
-        ...metadata,
-        local_session_id: localSession.sessionId,
-      } : {
-        local_session_id: localSession.sessionId,
-      },
+      session_metadata: sessionMetadata,
       planned_duration: plannedDuration,
       recording_started_by: recordingStartedBy,
     });
@@ -163,7 +167,7 @@ export async function syncSession(
     result.backendSessionId = backendSession.id;
     result.details!.sessionCreated = true;
 
-    console.log(`[SyncService] Created backend session: ${backendSession.id}`);
+    console.log(`[SyncService] Created backend session: ${backendSession.id}, response metadata:`, backendSession.session_metadata);
 
     // Step 2.5: Upload calibration data if available
     if (calibrationData) {

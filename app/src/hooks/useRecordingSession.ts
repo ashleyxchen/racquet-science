@@ -155,9 +155,14 @@ export interface UseRecordingSessionResult extends RecordingSessionState {
    * @param arduinoDeviceId - Optional BLE device ID of connected Arduino
    * @param externalSessionId - Optional external session ID (e.g., from wizard) to ensure all components use the same ID
    * @param plannedDuration - Optional planned duration in minutes (for Watch time remaining notifications)
+   * @param stateMachineHandlesVideo - If true, skip video start/stop (state machine handles it)
    */
-  startRecording: (arduinoDeviceId?: string, externalSessionId?: string, plannedDuration?: number) => Promise<void>;
-  stopRecording: () => Promise<RecordingSessionResult | null>;
+  startRecording: (arduinoDeviceId?: string, externalSessionId?: string, plannedDuration?: number, stateMachineHandlesVideo?: boolean) => Promise<void>;
+  /**
+   * Stop recording and return results
+   * @param videoPathOverride - Optional video path from state machine (used when state machine handles video)
+   */
+  stopRecording: (videoPathOverride?: string) => Promise<RecordingSessionResult | null>;
   getSensorData: () => { watch: SensorSample[]; arduino: SensorSample[] };
 }
 
@@ -198,9 +203,17 @@ export function useRecordingSession(): UseRecordingSessionResult {
   const fsrSamplesRef = useRef<FSRSample[]>([]);
   const fsrAssemblerRef = useRef<FSRFrameAssembler>(new FSRFrameAssembler());
 
+  // Track if state machine handles video (for skipping video stop)
+  const stateMachineHandlesVideoRef = useRef(false);
+
   // Video recording state (managed directly via native plugin, not via useVideoRecording hook)
   const isVideoRecordingRef = useRef(false);
   const videoPathRef = useRef<string | null>(null);
+
+  // Track when recording is fully initialized (for minimum duration check)
+  // Video needs ~2-3 seconds to have valid data, so we enforce minimum recording time
+  const recordingReadyTimeRef = useRef<number>(0);
+  const MINIMUM_RECORDING_MS = 3000; // 3 seconds minimum for valid video
 
   const isNative = Capacitor.isNativePlatform();
 
@@ -248,8 +261,9 @@ export function useRecordingSession(): UseRecordingSessionResult {
    * @param arduinoDeviceId - Optional BLE device ID of connected Arduino
    * @param externalSessionId - Optional external session ID (e.g., from wizard) to ensure consistency
    * @param plannedDuration - Optional planned duration in minutes (for Watch time remaining notifications)
+   * @param stateMachineHandlesVideo - If true, skip video start (state machine handles it)
    */
-  const startRecording = useCallback(async (arduinoDeviceId?: string, externalSessionId?: string, plannedDuration?: number): Promise<void> => {
+  const startRecording = useCallback(async (arduinoDeviceId?: string, externalSessionId?: string, plannedDuration?: number, stateMachineHandlesVideo?: boolean): Promise<void> => {
     if (isRecording) {
       throw new Error('Recording already in progress');
     }
@@ -261,7 +275,11 @@ export function useRecordingSession(): UseRecordingSessionResult {
     // Use external session ID if provided, otherwise generate new one
     // This ensures all components (Watch, video, sensors) use the same session ID
     const newSessionId = externalSessionId || uuidv4();
-    console.log('🎬 Starting recording session:', newSessionId, externalSessionId ? '(using external ID from wizard)' : '(generated new ID)');
+    console.log('🎬🎬🎬 ============ STARTING RECORDING SESSION ============');
+    console.log('🎬 Session ID:', newSessionId);
+    console.log('🎬 External ID provided:', externalSessionId || 'none');
+    console.log('🎬 Arduino device ID:', arduinoDeviceId || 'none');
+    console.log('🎬 Planned duration:', plannedDuration, 'minutes');
 
     // Reset state
     setSessionId(newSessionId);
@@ -278,7 +296,73 @@ export function useRecordingSession(): UseRecordingSessionResult {
     const recordingStartTime = Date.now();
     arduinoStartTimeRef.current = recordingStartTime;
     setStartTime(recordingStartTime);
+
+    // ============================================================
+    // STEP 0 & 1: Video recording
+    // Skip if state machine handles video orchestration
+    // ============================================================
+    stateMachineHandlesVideoRef.current = stateMachineHandlesVideo ?? false;
+
+    if (stateMachineHandlesVideo) {
+      console.log('🎥 [STEP 0-1/4] Skipping video start - state machine handles video orchestration');
+      // State machine already started video, just mark as recording
+      isVideoRecordingRef.current = true;
+      setVideoStatus('recording');
+    } else {
+      // Legacy path: useRecordingSession handles video
+      try {
+        console.log('🎥 [STEP 0/4] Resetting any stale recording state...');
+        await VideoRecording.resetRecordingState();
+        console.log('✅ Recording state reset');
+      } catch (err) {
+        console.warn('⚠️ Failed to reset recording state (non-fatal):', err);
+      }
+
+      try {
+        console.log('🎥 [STEP 1/4] Starting video recording FIRST (takes longest)...');
+        console.log('🎥 Session ID:', newSessionId);
+        await VideoRecording.startRecording({ sessionId: newSessionId });
+        isVideoRecordingRef.current = true;
+        console.log('🎥 isVideoRecordingRef.current SET TO TRUE');
+        setVideoStatus('recording');
+        console.log('✅ Video recording started successfully');
+      } catch (err) {
+        // Video failed - this is critical, abort the entire recording
+        setVideoStatus('error');
+        isVideoRecordingRef.current = false;
+        console.log('🎥❌ isVideoRecordingRef.current SET TO FALSE (video start failed)');
+        const errorMsg = err instanceof Error ? err.message : 'Failed to start video recording';
+        setError(errorMsg);
+        console.error('❌❌❌ Video recording failed to start:', err);
+        console.error('❌ Aborting recording - video is required');
+        throw err; // Re-throw to abort
+      }
+    }
+
+    // Now that video is recording, set isRecording to true
     setIsRecording(true);
+
+    // ============================================================
+    // STEP 2: Setup Watch listeners and start Watch recording
+    // ============================================================
+    console.log('📡 [STEP 2/4] Setting up Watch listeners and starting recording...');
+
+    // Skip Watch start command if state machine handles orchestration
+    // The state machine will send START command via WatchConnectivityManager
+    if (!stateMachineHandlesVideo) {
+      // Legacy path: useRecordingSession handles Watch start
+      // First, stop any existing Watch recording to ensure clean state
+      try {
+        console.log('📡 Stopping any existing Watch recording (cleanup)...');
+        await WatchMotion.stopWatchRecording();
+        console.log('📡 Watch recording cleanup complete');
+      } catch (err) {
+        // This is expected to fail if no recording was in progress - ignore
+        console.log('📡 No existing Watch recording to stop (expected)');
+      }
+    } else {
+      console.log('📡 Skipping Watch cleanup - state machine handles orchestration');
+    }
 
     // Reset motion batch tracking for new recording
     try {
@@ -290,7 +374,6 @@ export function useRecordingSession(): UseRecordingSessionResult {
 
     // Setup motion batch listener (100Hz binary streaming)
     try {
-      console.log('📡 Setting up motion batch listener (100Hz binary)...');
       const batchListener = await WatchMotion.addListener('motionBatch', (data: MotionBatchData) => {
         // Process each sample in the batch
         for (const batchSample of data.samples) {
@@ -333,7 +416,6 @@ export function useRecordingSession(): UseRecordingSessionResult {
 
     // Also setup legacy motion data listener as fallback
     try {
-      console.log('📡 Setting up legacy motion data listener (fallback)...');
       const listener = await WatchMotion.addListener('motionData', (data: MotionData) => {
         // Only process if batch listener isn't active
         if (motionBatchListenerRef.current) {
@@ -377,7 +459,6 @@ export function useRecordingSession(): UseRecordingSessionResult {
 
     // Setup pain note listener
     try {
-      console.log('📝 Setting up pain note listener...');
       const painListener = await WatchMotion.addListener('painNote', (data: PainNoteData) => {
         const painNote: PainNote = {
           id: data.id,
@@ -399,40 +480,47 @@ export function useRecordingSession(): UseRecordingSessionResult {
 
     // NOTE: Recording control listener is handled in RecordingWizardPage.tsx
     // Do NOT add another listener here - it causes double-stop issues
-    // The RecordingWizardPage listener calls wizard.stopRecording() which triggers
-    // the effect that calls handleExternalStop() → recordingSession.stopRecording()
 
     // Start Watch recording
-    try {
-      console.log('🎬 Starting Watch recording...', { sessionId: newSessionId, plannedDuration });
-      const watchResult = await WatchMotion.startWatchRecording({
-        sessionId: newSessionId,
-        plannedDuration: plannedDuration,
-      });
+    // Skip if state machine handles orchestration - it sends START via WatchConnectivityManager
+    if (stateMachineHandlesVideo) {
+      console.log('🎬 Skipping Watch start command - state machine handles orchestration');
+      setWatchStatus('recording'); // Assume state machine started Watch successfully
+    } else {
+      // Legacy path: useRecordingSession handles Watch start
+      try {
+        console.log('🎬 Starting Watch recording...', { sessionId: newSessionId, plannedDuration });
+        const watchResult = await WatchMotion.startWatchRecording({
+          sessionId: newSessionId,
+          plannedDuration: plannedDuration,
+        });
 
-      if (watchResult.success) {
-        setWatchStatus('recording');
-        console.log('✅ Watch recording started');
-      } else {
+        if (watchResult.success) {
+          setWatchStatus('recording');
+          console.log('✅ Watch recording started');
+        } else {
+          setWatchStatus('error');
+          const errorMsg = watchResult.error || 'Failed to start Watch recording';
+          setError(errorMsg);
+          console.error('❌ Watch recording failed:', errorMsg);
+          // Don't throw - we can still record video
+        }
+      } catch (err) {
         setWatchStatus('error');
-        const errorMsg = watchResult.error || 'Failed to start Watch recording';
+        const errorMsg = err instanceof Error ? err.message : 'Failed to start Watch recording';
         setError(errorMsg);
-        console.error('❌ Watch recording failed:', errorMsg);
+        console.error('❌ Watch recording error:', err);
         // Don't throw - we can still record video
       }
-    } catch (err) {
-      setWatchStatus('error');
-      const errorMsg = err instanceof Error ? err.message : 'Failed to start Watch recording';
-      setError(errorMsg);
-      console.error('❌ Watch recording error:', err);
-      // Don't throw - we can still record video
     }
 
-    // Start Arduino/racket sensor streaming (IMU + FSR)
+    // ============================================================
+    // STEP 3: Start Arduino/racket sensor streaming (IMU + FSR)
+    // ============================================================
+    console.log('🎾 [STEP 3/4] Starting Arduino sensor streaming...');
+
     if (arduinoDeviceId) {
       try {
-        console.log('🎾 Starting Arduino sensor streaming (IMU + FSR)...');
-
         // Start BLE notifications for combined sensor data
         await BleClient.startNotifications(
           arduinoDeviceId,
@@ -512,47 +600,23 @@ export function useRecordingSession(): UseRecordingSessionResult {
       console.log('ℹ️ No Arduino device connected, skipping racket data');
     }
 
-    // Start video recording (call native plugin directly)
-    try {
-      console.log('🎥 Starting video recording via native plugin with sessionId:', newSessionId);
-      await VideoRecording.startRecording({ sessionId: newSessionId });
-      isVideoRecordingRef.current = true;
-      console.log('🎥 isVideoRecordingRef.current SET TO TRUE');
-      setVideoStatus('recording');
-      console.log('✅ Video recording started successfully');
-    } catch (err) {
-      // Video failed - stop Watch recording and cleanup
-      setVideoStatus('error');
-      isVideoRecordingRef.current = false;
-      console.log('🎥❌ isVideoRecordingRef.current SET TO FALSE (video start failed)');
-      const errorMsg = err instanceof Error ? err.message : 'Failed to start video recording';
-      setError(errorMsg);
-      console.error('❌ Video recording failed to start:', err);
+    // ============================================================
+    // STEP 4: Recording fully started - log completion
+    // ============================================================
+    const initDuration = Date.now() - recordingStartTime;
+    console.log(`🎬🎬🎬 ============ RECORDING SESSION STARTED ============`);
+    console.log(`🎬 Initialization took ${initDuration}ms`);
+    console.log(`🎬 Video: ✅ | Watch: ${watchStatus === 'recording' ? '✅' : '⚠️'} | Arduino: ${arduinoDeviceId ? (arduinoStatus === 'recording' ? '✅' : '⚠️') : 'N/A'}`);
 
-      // Cleanup
-      if (watchStatus === 'recording') {
-        try {
-          await WatchMotion.stopWatchRecording();
-        } catch (stopErr) {
-          console.error('Error stopping Watch after video failure:', stopErr);
-        }
-      }
-
-      motionListenerRef.current?.remove();
-      motionListenerRef.current = null;
-
-      setIsRecording(false);
-      setSessionId(null);
-      setStartTime(null);
-
-      throw err; // Re-throw video error since it's critical
-    }
+    // Record when initialization completed (for minimum duration check)
+    recordingReadyTimeRef.current = Date.now();
   }, [isRecording, isNative, watchStatus]);
 
   /**
    * Stop recording and return session data
+   * @param videoPathOverride - Optional video path from state machine (used when state machine handles video)
    */
-  const stopRecording = useCallback(async (): Promise<RecordingSessionResult | null> => {
+  const stopRecording = useCallback(async (videoPathOverride?: string): Promise<RecordingSessionResult | null> => {
     // Guard against multiple simultaneous stop calls
     if (isStoppingRef.current) {
       console.warn('🛑 Stop already in progress, waiting for result...');
@@ -567,17 +631,45 @@ export function useRecordingSession(): UseRecordingSessionResult {
     }
 
     isStoppingRef.current = true;
-    console.log('🛑 Stopping recording session:', sessionId);
+    console.log('🛑🛑🛑 ============ STOPPING RECORDING SESSION ============');
+    console.log('🛑 Session ID:', sessionId);
+    console.log('🛑 isVideoRecordingRef.current:', isVideoRecordingRef.current);
+    console.log('🛑 arduinoDeviceIdRef.current:', arduinoDeviceIdRef.current || 'none');
+
+    // Check minimum recording duration
+    // Video needs at least 3 seconds of recording for AVFoundation to write valid data
+    if (recordingReadyTimeRef.current > 0) {
+      const elapsedSinceReady = Date.now() - recordingReadyTimeRef.current;
+      if (elapsedSinceReady < MINIMUM_RECORDING_MS) {
+        const waitTime = MINIMUM_RECORDING_MS - elapsedSinceReady;
+        console.log(`⏳ Recording only ${elapsedSinceReady}ms, waiting ${waitTime}ms for minimum duration...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        console.log('✅ Minimum duration reached, proceeding with stop');
+      }
+    }
 
     const endTime = Date.now();
     const sessionDuration = endTime - startTime;
+    console.log('🛑 Duration:', sessionDuration, 'ms');
 
     let videoPath: string | null = null;
     const errors: string[] = [];
 
-    // Stop video recording (call native plugin directly)
-    console.log('🎥 Video recording check - isVideoRecordingRef.current:', isVideoRecordingRef.current);
-    if (isVideoRecordingRef.current) {
+    // Stop video recording
+    if (stateMachineHandlesVideoRef.current) {
+      // State machine handles video - use the override path
+      console.log('🎥 State machine handles video - skipping video stop');
+      if (videoPathOverride) {
+        videoPath = videoPathOverride;
+        videoPathRef.current = videoPath;
+        console.log('✅ Using video path from state machine:', videoPath);
+      } else {
+        console.warn('🎥⚠️ State machine handles video but no videoPathOverride provided');
+      }
+      isVideoRecordingRef.current = false;
+      setVideoStatus('idle');
+    } else if (isVideoRecordingRef.current) {
+      // Legacy path: useRecordingSession handles video
       try {
         console.log('🎥 Stopping video recording via native plugin...');
         const videoResult = await VideoRecording.stopRecording();
@@ -602,20 +694,26 @@ export function useRecordingSession(): UseRecordingSessionResult {
     }
 
     // Stop Watch recording
-    try {
-      console.log('🛑 Stopping Watch recording...');
-      const watchResult = await WatchMotion.stopWatchRecording();
-      if (watchResult.success) {
-        console.log('✅ Watch recording stopped');
-      } else {
-        const errorMsg = watchResult.error || 'Failed to stop Watch recording';
+    // Skip if state machine handles orchestration - it sends STOP via WatchConnectivityManager
+    if (stateMachineHandlesVideoRef.current) {
+      console.log('🛑 Skipping Watch stop command - state machine handles orchestration');
+    } else {
+      // Legacy path: useRecordingSession handles Watch stop
+      try {
+        console.log('🛑 Stopping Watch recording...');
+        const watchResult = await WatchMotion.stopWatchRecording();
+        if (watchResult.success) {
+          console.log('✅ Watch recording stopped');
+        } else {
+          const errorMsg = watchResult.error || 'Failed to stop Watch recording';
+          errors.push(errorMsg);
+          console.error('❌ Watch stop failed:', errorMsg);
+        }
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Failed to stop Watch recording';
         errors.push(errorMsg);
-        console.error('❌ Watch stop failed:', errorMsg);
+        console.error('❌ Watch stop error:', err);
       }
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to stop Watch recording';
-      errors.push(errorMsg);
-      console.error('❌ Watch stop error:', err);
     }
 
     // Stop Arduino sensor streaming (IMU + FSR)
@@ -777,8 +875,8 @@ export function useRecordingSession(): UseRecordingSessionResult {
           ARDUINO_SENSOR_DATA_CHAR_UUID
         ).catch(() => {});
       }
-      // Stop video recording if still active
-      if (isVideoRecordingRef.current && isNative) {
+      // Stop video recording if still active (skip if state machine handles it)
+      if (isVideoRecordingRef.current && isNative && !stateMachineHandlesVideoRef.current) {
         VideoRecording.stopRecording().catch(() => {});
         isVideoRecordingRef.current = false;
       }

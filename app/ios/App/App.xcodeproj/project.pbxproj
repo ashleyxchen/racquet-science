@@ -27,6 +27,9 @@
 		B676B24A2F3A7CC1006D4563 /* AudioPlaybackManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B676B2492F3A7CC1006D4563 /* AudioPlaybackManager.swift */; };
 		B676B2B22F3AB540006D4563 /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = B676B2B12F3AB52F006D4563 /* capacitor.config.json */; };
 		B67718D72F61A83400FE0A2E /* Combine.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B67718D62F61A83400FE0A2E /* Combine.framework */; };
+		B6771C002F648E0A00FE0A2E /* VideoRecordingPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6771BFF2F648E0A00FE0A2E /* VideoRecordingPlugin.swift */; };
+		B6771C022F648E1200FE0A2E /* RecordingStateMachinePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6771C012F648E1200FE0A2E /* RecordingStateMachinePlugin.swift */; };
+		B6771C042F648E1800FE0A2E /* RecordingStateMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6771C032F648E1800FE0A2E /* RecordingStateMachine.swift */; };
 		B698F7BD2EDD258900A5CE11 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B698F7BC2EDD258900A5CE11 /* WatchConnectivityManager.swift */; };
 		B6AA11002F4B8A00001D3F11 /* VideoRecordingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6AA10FF2F4B8A00001D3F11 /* VideoRecordingManager.swift */; };
 		B6AA11022F4B8A10001D3F11 /* VideoRecordingPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6AA11012F4B8A10001D3F11 /* VideoRecordingPlugin.swift */; };
@@ -87,6 +90,9 @@
 		B676B2492F3A7CC1006D4563 /* AudioPlaybackManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlaybackManager.swift; sourceTree = "<group>"; };
 		B676B2B12F3AB52F006D4563 /* capacitor.config.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
 		B67718D62F61A83400FE0A2E /* Combine.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Combine.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS26.2.sdk/System/Library/Frameworks/Combine.framework; sourceTree = DEVELOPER_DIR; };
+		B6771BFF2F648E0A00FE0A2E /* VideoRecordingPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoRecordingPlugin.swift; sourceTree = "<group>"; };
+		B6771C012F648E1200FE0A2E /* RecordingStateMachinePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingStateMachinePlugin.swift; sourceTree = "<group>"; };
+		B6771C032F648E1800FE0A2E /* RecordingStateMachine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingStateMachine.swift; sourceTree = "<group>"; };
 		B698F7BC2EDD258900A5CE11 /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityManager.swift; sourceTree = "<group>"; };
 		B6AA10FF2F4B8A00001D3F11 /* VideoRecordingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoRecordingManager.swift; sourceTree = "<group>"; };
 		B6AA11012F4B8A10001D3F11 /* VideoRecordingPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoRecordingPlugin.swift; sourceTree = "<group>"; };
@@ -152,6 +158,9 @@
 		504EC3061FED79650016851F /* App */ = {
 			isa = PBXGroup;
 			children = (
+				B6771C032F648E1800FE0A2E /* RecordingStateMachine.swift */,
+				B6771C012F648E1200FE0A2E /* RecordingStateMachinePlugin.swift */,
+				B6771BFF2F648E0A00FE0A2E /* VideoRecordingPlugin.swift */,
 				B676B2B12F3AB52F006D4563 /* capacitor.config.json */,
 				B676B2492F3A7CC1006D4563 /* AudioPlaybackManager.swift */,
 				B6421BF42F2948E3007C3975 /* MyViewController.swift */,
@@ -354,9 +363,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B6771C002F648E0A00FE0A2E /* VideoRecordingPlugin.swift in Sources */,
+				B6771C022F648E1200FE0A2E /* RecordingStateMachinePlugin.swift in Sources */,
 				B698F7BD2EDD258900A5CE11 /* WatchConnectivityManager.swift in Sources */,
 				B6442D572EDD2C3F002CCEC5 /* WatchMotionPlugin.m in Sources */,
 				B6442D5A2EDD2C4F002CCEC5 /* WatchMotionPlugin.swift in Sources */,
+				B6771C042F648E1800FE0A2E /* RecordingStateMachine.swift in Sources */,
 				B6421BF52F2948E3007C3975 /* MyViewController.swift in Sources */,
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				B676B24A2F3A7CC1006D4563 /* AudioPlaybackManager.swift in Sources */,

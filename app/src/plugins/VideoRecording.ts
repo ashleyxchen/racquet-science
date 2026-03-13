@@ -73,6 +73,12 @@ export interface VideoRecordingPlugin {
   }>;
 
   /**
+   * Force reset the recording state
+   * Use this to recover from stuck recording state before starting a new recording
+   */
+  resetRecordingState(): Promise<{ success: boolean }>;
+
+  /**
    * Check camera and microphone permissions
    */
   checkPermissions(): Promise<{

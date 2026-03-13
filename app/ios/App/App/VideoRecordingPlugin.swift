@@ -17,6 +17,7 @@ public class VideoRecordingPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "startRecording", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "stopRecording", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getRecordingStatus", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "resetRecordingState", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "checkPermissions", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "requestPermissions", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "startPreview", returnType: CAPPluginReturnPromise),
@@ -298,6 +299,14 @@ public class VideoRecordingPlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc private func startButtonTapped() {
         NSLog("🎥▶️ VideoRecordingPlugin: Native start button tapped!")
+
+        // Check state machine - only notify if we can start
+        let currentState = RecordingStateMachine.shared.state
+        if currentState != .idle {
+            NSLog("🎥▶️ Cannot start - state machine is in \(currentState)")
+            return
+        }
+
         NSLog("🎥▶️ Notifying JS via 'startButtonTapped' event...")
 
         // Notify JS to handle start recording
@@ -311,6 +320,14 @@ public class VideoRecordingPlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc private func stopButtonTapped() {
         NSLog("🎥🛑 VideoRecordingPlugin: Native stop button tapped!")
+
+        // Check state machine - only notify if we can stop
+        let currentState = RecordingStateMachine.shared.state
+        if currentState != .recording {
+            NSLog("🎥🛑 Cannot stop - state machine is in \(currentState)")
+            return
+        }
+
         NSLog("🎥🛑 Notifying JS via 'stopButtonTapped' event...")
 
         // Notify JS to handle stop recording
@@ -483,6 +500,12 @@ public class VideoRecordingPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func getRecordingStatus(_ call: CAPPluginCall) {
         let status = manager.getStatus()
         call.resolve(status)
+    }
+
+    @objc func resetRecordingState(_ call: CAPPluginCall) {
+        NSLog("🎥 VideoRecordingPlugin.resetRecordingState() called")
+        manager.forceResetRecordingState()
+        call.resolve(["success": true])
     }
 
     @objc func startPreview(_ call: CAPPluginCall) {

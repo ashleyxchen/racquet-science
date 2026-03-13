@@ -35,6 +35,7 @@ export interface DeviceState {
 
 // Extended racket device state with sensor capabilities
 export interface RacketDeviceState extends DeviceState {
+  deviceId?: string;
   hasIMU: boolean;
   hasFSR: boolean;
 }
@@ -64,6 +65,8 @@ export interface CalibrationSample {
   force: number;
   accel?: { x: number; y: number; z: number };
   gyro?: { x: number; y: number; z: number };
+  /** FSR grid values (32 sensors) when collected from real hardware */
+  fsrValues?: number[];
 }
 
 // Calibration State

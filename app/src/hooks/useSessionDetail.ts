@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { getSession } from '../services/api/sessions';
 import { getSensorData } from '../services/api/sensorData';
 import { getFSRData } from '../services/api/fsrData';
@@ -148,7 +149,24 @@ export function useSessionDetail(sessionId: number): UseSessionDetailResult {
 
         // Set video URL if available
         if (sessionData.has_video) {
-          const url = getVideoStreamUrl(sessionId);
+          let url: string | null = null;
+
+          // On native platforms, prefer local video path from session metadata
+          const isNative = Capacitor.isNativePlatform();
+          const localVideoPath = sessionData.session_metadata?.stateMachineVideoPath as string | undefined;
+
+          console.log(`[useSessionDetail] Video URL resolution - isNative: ${isNative}, localVideoPath: ${localVideoPath}`);
+
+          if (isNative && localVideoPath) {
+            // Convert native file path to webview-accessible URL
+            url = Capacitor.convertFileSrc(localVideoPath);
+            console.log(`[useSessionDetail] Using local video URL: ${url}`);
+          } else {
+            // Fall back to backend streaming URL
+            url = getVideoStreamUrl(sessionId);
+            console.log(`[useSessionDetail] Using backend video URL: ${url}`);
+          }
+
           if (!isMounted) return;
           setVideoUrl(url);
         }

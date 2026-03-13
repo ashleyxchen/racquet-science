@@ -15,6 +15,43 @@ import type { Session, SensorSample, FSRSample, FSRDataFile, PainNote } from '..
 const SESSIONS_KEY = 'recording_sessions';
 const SENSOR_DATA_DIR = 'sensor_data';
 
+// Track if directory has been verified to exist this session
+let sensorDataDirExists = false;
+
+/**
+ * Ensure sensor_data directory exists (idempotent)
+ */
+async function ensureSensorDataDir(): Promise<void> {
+  if (sensorDataDirExists) return;
+
+  try {
+    // Try to stat the directory first
+    await Filesystem.stat({
+      path: SENSOR_DATA_DIR,
+      directory: Directory.Data,
+    });
+    sensorDataDirExists = true;
+  } catch {
+    // Directory doesn't exist, create it
+    try {
+      await Filesystem.mkdir({
+        path: SENSOR_DATA_DIR,
+        directory: Directory.Data,
+        recursive: true,
+      });
+      sensorDataDirExists = true;
+    } catch (mkdirErr: unknown) {
+      // If error is "already exists", that's fine
+      const errMsg = mkdirErr instanceof Error ? mkdirErr.message : String(mkdirErr);
+      if (errMsg.includes('already exists')) {
+        sensorDataDirExists = true;
+      } else {
+        throw mkdirErr;
+      }
+    }
+  }
+}
+
 export interface StoredSession extends Session {
   sensorDataPath?: string;     // Path to JSON file containing Watch sensor samples
   racketDataPath?: string;     // Path to JSON file containing racket IMU samples
@@ -117,16 +154,8 @@ async function saveSensorData(
   const path = `${SENSOR_DATA_DIR}/${filename}`;
 
   try {
-    // Ensure directory exists
-    try {
-      await Filesystem.mkdir({
-        path: SENSOR_DATA_DIR,
-        directory: Directory.Data,
-        recursive: true,
-      });
-    } catch (err) {
-      // Directory might already exist
-    }
+    // Ensure directory exists (check first to avoid "already exists" error)
+    await ensureSensorDataDir();
 
     // Write sensor data
     await Filesystem.writeFile({
@@ -156,15 +185,7 @@ async function saveFSRData(
 
   try {
     // Ensure directory exists
-    try {
-      await Filesystem.mkdir({
-        path: SENSOR_DATA_DIR,
-        directory: Directory.Data,
-        recursive: true,
-      });
-    } catch (err) {
-      // Directory might already exist
-    }
+    await ensureSensorDataDir();
 
     // Create FSR data file structure
     const fsrDataFile: FSRDataFile = {
@@ -204,15 +225,7 @@ async function savePainNotes(
 
   try {
     // Ensure directory exists
-    try {
-      await Filesystem.mkdir({
-        path: SENSOR_DATA_DIR,
-        directory: Directory.Data,
-        recursive: true,
-      });
-    } catch (err) {
-      // Directory might already exist
-    }
+    await ensureSensorDataDir();
 
     // Write pain notes data
     await Filesystem.writeFile({

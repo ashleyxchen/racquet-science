@@ -201,7 +201,9 @@ async def update_session(
     if session_update.status is not None:
         session.status = session_update.status
     if session_update.session_metadata is not None:
-        session.session_metadata = session_update.session_metadata
+        # Merge new metadata with existing metadata instead of replacing
+        existing_metadata = session.session_metadata or {}
+        session.session_metadata = {**existing_metadata, **session_update.session_metadata}
 
     await db.flush()
     await db.refresh(session)

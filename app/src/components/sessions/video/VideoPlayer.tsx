@@ -8,6 +8,7 @@ interface VideoPlayerProps {
   endTime?: number;    // For clipped playback
   loop?: boolean;
   showSpeedControls?: boolean;
+  onError?: (error: string) => void;
 }
 
 const SPEED_OPTIONS = [
@@ -29,12 +30,62 @@ export function VideoPlayer({
   endTime,
   loop = false,
   showSpeedControls = true,
+  onError,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [customSpeed, setCustomSpeed] = useState('1');
   const [useCustomSpeed, setUseCustomSpeed] = useState(false);
   const [currentVideoTime, setCurrentVideoTime] = useState(0);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Log video URL for debugging
+  useEffect(() => {
+    console.log('[VideoPlayer] Video URL:', videoUrl);
+  }, [videoUrl]);
+
+  // Handle video errors
+  const handleVideoError = useCallback(() => {
+    const video = videoRef.current;
+    if (video?.error) {
+      const errorCode = video.error.code;
+      const errorMessage = video.error.message || 'Unknown error';
+
+      // Map error codes to human-readable messages
+      const errorMessages: Record<number, string> = {
+        1: 'Video loading aborted',
+        2: 'Network error while loading video',
+        3: 'Video decoding failed',
+        4: 'Video format not supported',
+      };
+
+      const displayMessage = errorMessages[errorCode] || errorMessage;
+      console.error('[VideoPlayer] Video error:', {
+        code: errorCode,
+        message: errorMessage,
+        url: videoUrl,
+      });
+
+      setVideoError(displayMessage);
+      setIsLoading(false);
+      onError?.(displayMessage);
+    }
+  }, [videoUrl, onError]);
+
+  // Handle video can play
+  const handleCanPlay = useCallback(() => {
+    console.log('[VideoPlayer] Video can play');
+    setIsLoading(false);
+    setVideoError(null);
+  }, []);
+
+  // Handle video loading started
+  const handleLoadStart = useCallback(() => {
+    console.log('[VideoPlayer] Video loading started');
+    setIsLoading(true);
+    setVideoError(null);
+  }, []);
 
   // Handle external currentTime changes (from chart clicks)
   // Only seek if the difference is significant (> 0.5 seconds) to avoid
@@ -126,15 +177,41 @@ export function VideoPlayer({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Debug: log on every render
+  console.log('[VideoPlayer] Rendering with URL:', videoUrl, 'isLoading:', isLoading, 'error:', videoError);
+
   return (
-    <div className="video-player-container">
+    <div className="video-player-container" style={{ minHeight: '200px', background: '#000' }}>
+      {/* Debug info - always visible */}
+      <div style={{ padding: '8px', background: '#333', color: '#fff', fontSize: '12px', fontFamily: 'monospace' }}>
+        URL: {videoUrl}<br/>
+        Loading: {isLoading ? 'yes' : 'no'} | Error: {videoError || 'none'}
+      </div>
+      {videoError && (
+        <div className="video-error-message" style={{ padding: '16px', background: '#ff4444', color: '#fff' }}>
+          <p>Failed to load video: {videoError}</p>
+          <p className="video-error-url">URL: {videoUrl}</p>
+        </div>
+      )}
+      {isLoading && !videoError && (
+        <div className="video-loading-indicator" style={{ padding: '16px', background: '#444', color: '#fff' }}>Loading video...</div>
+      )}
       <video
         ref={videoRef}
         className="video-player-element"
         src={videoUrl}
         controls
+        playsInline
         onTimeUpdate={handleTimeUpdate}
+        onError={handleVideoError}
+        onCanPlay={handleCanPlay}
+        onLoadStart={handleLoadStart}
+        onLoadedMetadata={() => console.log('[VideoPlayer] Metadata loaded')}
+        onStalled={() => console.log('[VideoPlayer] Stalled')}
+        onWaiting={() => console.log('[VideoPlayer] Waiting')}
+        onAbort={() => console.log('[VideoPlayer] Aborted')}
         loop={loop && startTime === undefined && endTime === undefined}
+        style={{ width: '100%', maxHeight: '400px', background: '#222' }}
       />
 
       {showSpeedControls && (

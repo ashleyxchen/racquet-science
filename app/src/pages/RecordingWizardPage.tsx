@@ -1,5 +1,8 @@
 /**
  * RecordingWizardPage - Main wizard page that orchestrates all steps
+ *
+ * NOTE: Recording orchestration is now handled by the native RecordingStateMachine.
+ * This page listens to state changes and updates UI accordingly.
  */
 
 import { useEffect, useRef, useCallback } from 'react';
@@ -19,6 +22,7 @@ import { useRecordingWizard } from '../hooks/useRecordingWizard';
 import { useVideoRecording } from '../hooks/useVideoRecording';
 import { useRecordingSession } from '../hooks/useRecordingSession';
 import { useSyncSession } from '../hooks/useSyncSession';
+import { useRecordingState } from '../hooks/useRecordingState';
 import { saveRecordingSession } from '../services/sessionStorage';
 import { uploadCalibration } from '../services/api/sessions';
 import VideoRecording from '../plugins/VideoRecording';
@@ -52,6 +56,9 @@ export function RecordingWizardPage() {
   const recordingSession = useRecordingSession();
   const { syncSession, isSyncing } = useSyncSession();
 
+  // Native state machine - single source of truth for recording state
+  const recordingState = useRecordingState();
+
   // Track previous recording state to detect when recording stops
   const wasRecordingRef = useRef(false);
   const isStoppingRef = useRef(false);
@@ -72,12 +79,27 @@ export function RecordingWizardPage() {
     isPreviewingRef.current = videoRecording.isPreviewing;
   }, [videoRecording.isPreviewing]);
 
-  // Detect when recording stops (e.g., from Watch) and navigate to sessions
+  // Detect when recording stops (e.g., from Watch or state machine)
+  // NOTE: We now watch BOTH wizard state AND native state machine
   useEffect(() => {
-    const isRecording = state.recording.isRecording;
+    // Use state machine as authoritative source when available, fallback to wizard state
+    const isRecording = recordingState.isRecording || state.recording.isRecording;
 
-    // If we were recording and now we're not, navigate to sessions
-    if (wasRecordingRef.current && !isRecording && state.currentStep === 'recording_active') {
+    // Check if state machine has fully stopped (idle with video path available)
+    const stateMachineFullyStopped = recordingState.state === 'idle' && !recordingState.isRecording;
+
+    console.log('[RecordingWizardPage] Recording state check:', {
+      wizardIsRecording: state.recording.isRecording,
+      stateMachineIsRecording: recordingState.isRecording,
+      stateMachineState: recordingState.state,
+      stateMachineVideoPath: recordingState.context.videoPath,
+      wasRecording: wasRecordingRef.current,
+      currentStep: state.currentStep,
+    });
+
+    // If we were recording and state machine has fully stopped (idle), handle stop
+    // We wait for 'idle' state to ensure video path is available in context
+    if (wasRecordingRef.current && stateMachineFullyStopped && state.currentStep === 'recording_active') {
       console.log('[RecordingWizardPage] Recording stopped externally, stopping and saving...');
 
       // Handle external stop (e.g., from Watch or native stop button)
@@ -96,9 +118,14 @@ export function RecordingWizardPage() {
             console.error('[RecordingWizardPage] Preview stop error (non-blocking):', err);
           });
 
+          // Get video path from state machine context (state machine already handled video stop)
+          const videoPath = recordingState.context.videoPath;
+          console.log('[RecordingWizardPage] External stop - video path from state machine:', videoPath);
+
           // Stop recording session with timeout to prevent hanging
+          // Pass video path from state machine since it handles video orchestration
           const recordingStopPromise = Promise.race([
-            recordingSession.stopRecording(),
+            recordingSession.stopRecording(videoPath),
             new Promise<null>((resolve) => {
               setTimeout(() => {
                 console.warn('[RecordingWizardPage] Recording stop timed out after 5s');
@@ -134,7 +161,10 @@ export function RecordingWizardPage() {
             try {
               console.log('[RecordingWizardPage] External stop - syncing to backend...');
               const syncResult = await syncSession(result, {
-                metadata: { local_session_id: result.sessionId },
+                metadata: {
+                  local_session_id: result.sessionId,
+                  stateMachineVideoPath: videoPath || result.videoPath,
+                },
                 plannedDuration: state.plannedDuration,
                 recordingStartedBy: state.recording.startedBy || 'phone',
                 calibrationData: state.calibrationResult || undefined,
@@ -165,9 +195,18 @@ export function RecordingWizardPage() {
       handleExternalStop();
     }
 
-    // Update ref for next render
-    wasRecordingRef.current = isRecording;
-  }, [state.recording.isRecording, state.currentStep, navigate, recordingSession, syncSession, state.plannedDuration, state.recording.startedBy, state.calibrationResult, state.sessionId, wizard, videoRecording]);
+    // Update ref for next render - track if we're still recording
+    // IMPORTANT: Only update to false when state machine is fully stopped (idle)
+    // This prevents the ref from being set to false during 'stopping' transition
+    // which would cause the external stop handler to never trigger
+    if (isRecording) {
+      wasRecordingRef.current = true;
+    } else if (recordingState.state === 'idle' || recordingState.state === 'error') {
+      // Only clear the ref when state machine has fully stopped
+      wasRecordingRef.current = false;
+    }
+    // Note: When state is 'stopping', we keep wasRecordingRef.current as true
+  }, [state.recording.isRecording, recordingState.isRecording, recordingState.state, recordingState.context.videoPath, state.currentStep, navigate, recordingSession, syncSession, state.plannedDuration, state.recording.startedBy, state.calibrationResult, state.sessionId, wizard, videoRecording, recordingState.context]);
 
   // Start/stop camera preview based on current step
   useEffect(() => {
@@ -246,7 +285,8 @@ export function RecordingWizardPage() {
             const arduinoDeviceId = currentState.devices.racket.deviceId || undefined;
             const wizardSessionId = currentState.sessionId;
             const plannedDuration = currentState.plannedDuration;
-            currentRecordingSession.startRecording(arduinoDeviceId, wizardSessionId, plannedDuration).catch(console.error);
+            // Pass true for stateMachineHandlesVideo - state machine orchestrates video
+            currentRecordingSession.startRecording(arduinoDeviceId, wizardSessionId, plannedDuration, true).catch(console.error);
           } else {
             console.warn('🎮⚠️ [RecordingWizardPage] recordingControl action not handled:', {
               action: data.action,
@@ -303,7 +343,8 @@ export function RecordingWizardPage() {
             const wizardSessionId = currentState.sessionId;
             const plannedDuration = currentState.plannedDuration;
             console.log('[RecordingWizardPage] Starting recording with wizard sessionId:', wizardSessionId, 'duration:', plannedDuration);
-            currentRecordingSession.startRecording(arduinoDeviceId, wizardSessionId, plannedDuration).catch(console.error);
+            // Pass true for stateMachineHandlesVideo - state machine orchestrates video
+            currentRecordingSession.startRecording(arduinoDeviceId, wizardSessionId, plannedDuration, true).catch(console.error);
 
             console.log('▶️ [RecordingWizardPage] Recording start triggered from native button');
           } else {
@@ -610,8 +651,9 @@ export function RecordingWizardPage() {
                 const wizardSessionId = state.sessionId; // Use wizard's sessionId for consistency
                 const plannedDuration = state.plannedDuration; // Pass to Watch for time remaining notifications
                 console.log('[RecordingWizardPage] Starting recording with wizard sessionId:', wizardSessionId, 'duration:', plannedDuration);
-                await recordingSession.startRecording(arduinoDeviceId, wizardSessionId, plannedDuration);
-                console.log('[RecordingWizardPage] Recording session started (sensors + video)');
+                // Pass true for stateMachineHandlesVideo - state machine orchestrates video start/stop
+                await recordingSession.startRecording(arduinoDeviceId, wizardSessionId, plannedDuration, true);
+                console.log('[RecordingWizardPage] Recording session started (sensors only, video handled by state machine)');
               } catch (err) {
                 console.error('[RecordingWizardPage] Failed to start recording session:', err);
               }
@@ -631,13 +673,16 @@ export function RecordingWizardPage() {
               isStoppingRef.current = true;
 
               try {
-                // Stop recording session (this handles both sensors and video internally)
-                // and returns the result with videoPath already included
-                console.log('[RecordingWizardPage] Stopping recording session...');
-                const result = await recordingSession.stopRecording();
+                // Stop wizard/state machine FIRST to get video path
+                // State machine handles video stop and returns the path
+                console.log('[RecordingWizardPage] Stopping via state machine...');
+                const wizardResult = await wizard.stopRecording();
+                const videoPath = wizardResult?.videoPath;
+                console.log('[RecordingWizardPage] State machine stopped, videoPath:', videoPath);
 
-                // Now stop wizard state (this triggers re-render)
-                await wizard.stopRecording();
+                // Stop recording session (sensors only, pass video path from state machine)
+                console.log('[RecordingWizardPage] Stopping recording session...');
+                const result = await recordingSession.stopRecording(videoPath);
 
                 // Force stop preview BEFORE navigation to prevent orphaned preview
                 await videoRecording.forceStopPreview();
@@ -666,7 +711,10 @@ export function RecordingWizardPage() {
                   try {
                     console.log('[RecordingWizardPage] Syncing session to backend immediately...');
                     const syncResult = await syncSession(result, {
-                      metadata: { local_session_id: result.sessionId },
+                      metadata: {
+                        local_session_id: result.sessionId,
+                        stateMachineVideoPath: result.videoPath,
+                      },
                       plannedDuration: state.plannedDuration,
                       recordingStartedBy: state.recording.startedBy || 'phone',
                       calibrationData: state.calibrationResult || undefined,

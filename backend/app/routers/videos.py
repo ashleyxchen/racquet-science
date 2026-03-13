@@ -1,16 +1,81 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request, Header
+from fastapi.responses import FileResponse, StreamingResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pathlib import Path
 import aiofiles
 import os
+from typing import Optional
 
 from app.database import get_db
 from app.models import Session
 from app.config import settings
 
 router = APIRouter(prefix="/api/sessions", tags=["videos"])
+
+
+def parse_range_header(range_header: str, file_size: int) -> tuple[int, int]:
+    """Parse HTTP Range header and return start and end byte positions."""
+    # Range header format: "bytes=start-end" or "bytes=start-"
+    range_str = range_header.replace("bytes=", "")
+    parts = range_str.split("-")
+
+    start = int(parts[0]) if parts[0] else 0
+    end = int(parts[1]) if parts[1] else file_size - 1
+
+    # Clamp values
+    start = max(0, min(start, file_size - 1))
+    end = max(start, min(end, file_size - 1))
+
+    return start, end
+
+
+async def ranged_file_response(
+    file_path: Path,
+    range_header: Optional[str],
+    media_type: str = "video/mp4"
+) -> Response:
+    """
+    Return a file response that supports HTTP Range requests.
+    Required for video streaming on iOS Safari.
+    """
+    file_size = file_path.stat().st_size
+
+    if range_header:
+        # Parse range header
+        start, end = parse_range_header(range_header, file_size)
+        chunk_size = end - start + 1
+
+        # Read the requested range
+        async with aiofiles.open(file_path, 'rb') as f:
+            await f.seek(start)
+            content = await f.read(chunk_size)
+
+        # Return 206 Partial Content
+        return Response(
+            content=content,
+            status_code=206,
+            media_type=media_type,
+            headers={
+                "Content-Range": f"bytes {start}-{end}/{file_size}",
+                "Accept-Ranges": "bytes",
+                "Content-Length": str(chunk_size),
+            }
+        )
+    else:
+        # No range header - return full file with Accept-Ranges header
+        async with aiofiles.open(file_path, 'rb') as f:
+            content = await f.read()
+
+        return Response(
+            content=content,
+            status_code=200,
+            media_type=media_type,
+            headers={
+                "Accept-Ranges": "bytes",
+                "Content-Length": str(file_size),
+            }
+        )
 
 
 @router.post("/{session_id}/video", status_code=201)
@@ -73,32 +138,41 @@ async def upload_video(
 @router.get("/{session_id}/video")
 async def get_video(
     session_id: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    range: Optional[str] = Header(None)
 ):
     """
     Stream or download the video for a session.
+    Supports HTTP Range requests for iOS Safari video playback.
     """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    logger.info(f"[VIDEO] GET /sessions/{session_id}/video - Range header: {range}")
+
     # Get session
     query = select(Session).where(Session.id == session_id)
     result = await db.execute(query)
     session = result.scalar_one_or_none()
 
     if not session:
+        logger.error(f"[VIDEO] Session {session_id} not found")
         raise HTTPException(status_code=404, detail="Session not found")
 
     if not session.has_video or not session.video_path:
+        logger.error(f"[VIDEO] Session {session_id} has no video (has_video={session.has_video}, video_path={session.video_path})")
         raise HTTPException(status_code=404, detail="No video found for this session")
 
     video_path = Path(session.video_path)
     if not video_path.exists():
+        logger.error(f"[VIDEO] Video file not found on disk: {video_path}")
         raise HTTPException(status_code=404, detail="Video file not found on disk")
 
-    # Return video file
-    return FileResponse(
-        path=video_path,
-        media_type="video/mp4",
-        filename=f"session_{session_id}_recording{video_path.suffix}"
-    )
+    file_size = video_path.stat().st_size
+    logger.info(f"[VIDEO] Serving video: {video_path} (size: {file_size} bytes)")
+
+    # Return video file with Range request support
+    return await ranged_file_response(video_path, range, media_type="video/mp4")
 
 
 @router.delete("/{session_id}/video", status_code=204)

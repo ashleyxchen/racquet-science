@@ -1,12 +1,16 @@
 /**
  * State machine hook for the Recording Session Wizard
  * Manages wizard flow from device connection through calibration to recording
+ *
+ * NOTE: Recording state (isRecording, startTime, startedBy) is now managed by
+ * the native RecordingStateMachine. This wizard hook handles navigation/calibration only.
  */
 
 import { useReducer, useCallback, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { BleClient } from '@capacitor-community/bluetooth-le';
+import RecordingStateMachine from '../plugins/RecordingStateMachine';
 import {
   WizardState,
   WizardAction,
@@ -20,9 +24,19 @@ import {
 } from '../types/recordingWizard';
 import {
   ARDUINO_BLE_SERVICE_UUID,
+  ARDUINO_SENSOR_DATA_CHAR_UUID,
+  ARDUINO_CONTROL_CHAR_UUID,
   ARDUINO_DEVICE_NAME,
   ArduinoDevice,
+  ArduinoCommand,
+  PacketType,
 } from '../types/arduino';
+import {
+  getPacketType,
+  parseFSRChunk,
+  FSRFrameAssembler,
+} from '../services/arduinoParser';
+import type { ArduinoFSRFrame } from '../types/arduino';
 
 // WatchMotion plugin interface
 interface WatchMotionPlugin {
@@ -280,7 +294,7 @@ export interface UseRecordingWizardResult {
   setCameraPreview: (active: boolean) => void;
   // Recording
   startRecording: (startedBy: RecordingStartedBy) => Promise<void>;
-  stopRecording: () => Promise<void>;
+  stopRecording: () => Promise<{ videoPath?: string } | null>;
 }
 
 export function useRecordingWizard(): UseRecordingWizardResult {
@@ -291,6 +305,11 @@ export function useRecordingWizard(): UseRecordingWizardResult {
   const calibrationTimerRef = useRef<NodeJS.Timeout | null>(null);
   const postCalibrationTimerRef = useRef<NodeJS.Timeout | null>(null);
   const recordingControlListenerRef = useRef<{ remove: () => void } | null>(null);
+
+  // FSR collection for calibration
+  const fsrAssemblerRef = useRef<FSRFrameAssembler>(new FSRFrameAssembler());
+  const fsrCalibrationSamplesRef = useRef<ArduinoFSRFrame[]>([]);
+  const fsrNotificationActiveRef = useRef<boolean>(false);
 
   // Step navigation mapping
   const stepOrder: WizardStep[] = [
@@ -559,6 +578,137 @@ export function useRecordingWizard(): UseRecordingWizardResult {
     dispatch({ type: 'SET_DURATION', minutes: clamped });
   }, []);
 
+  /**
+   * Get raw sum of FSR grid values for calibration display.
+   * Returns the sum of all 32 sensor values (range 0-32736).
+   * No scaling applied - raw values preserved for future processing.
+   */
+  const fsrRawSum = useCallback((fsrFrame: ArduinoFSRFrame): number => {
+    return fsrFrame.flat.reduce((acc, val) => acc + val, 0);
+  }, []);
+
+  /**
+   * Start FSR notifications for calibration data collection.
+   * Must be called when Arduino is connected.
+   */
+  const startFSRCalibrationCollection = useCallback(async (deviceId: string): Promise<boolean> => {
+    if (!isNative || !deviceId) {
+      console.warn('[Calibration] Cannot start FSR collection: not native or no deviceId');
+      return false;
+    }
+
+    try {
+      // Clear previous samples and assembler
+      fsrCalibrationSamplesRef.current = [];
+      fsrAssemblerRef.current.clear();
+
+      // First, try to stop any existing notifications (in case they're still active from recording)
+      try {
+        await BleClient.stopNotifications(
+          deviceId,
+          ARDUINO_BLE_SERVICE_UUID,
+          ARDUINO_SENSOR_DATA_CHAR_UUID
+        );
+        console.log('[Calibration] Stopped existing notifications');
+      } catch {
+        // Ignore - notifications might not be active
+      }
+
+      // Small delay to ensure clean state
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Start FSR streaming on Arduino
+      console.log('[Calibration] Sending START_FSR command to Arduino');
+      await BleClient.write(
+        deviceId,
+        ARDUINO_BLE_SERVICE_UUID,
+        ARDUINO_CONTROL_CHAR_UUID,
+        new DataView(new Uint8Array([ArduinoCommand.START_FSR]).buffer)
+      );
+
+      // Start notifications
+      console.log('[Calibration] Starting BLE notifications');
+      await BleClient.startNotifications(
+        deviceId,
+        ARDUINO_BLE_SERVICE_UUID,
+        ARDUINO_SENSOR_DATA_CHAR_UUID,
+        (value: DataView) => {
+          const packetType = getPacketType(value);
+          if (packetType === PacketType.FSR) {
+            const chunk = parseFSRChunk(value);
+            if (chunk) {
+              const frame = fsrAssemblerRef.current.addChunk(chunk);
+              if (frame) {
+                fsrCalibrationSamplesRef.current.push(frame);
+                // Log occasionally for debugging
+                if (fsrCalibrationSamplesRef.current.length % 50 === 1) {
+                  console.log('[Calibration] FSR frames received:', fsrCalibrationSamplesRef.current.length);
+                }
+              }
+            }
+          }
+        }
+      );
+
+      fsrNotificationActiveRef.current = true;
+      console.log('[Calibration] Started FSR collection from Arduino');
+
+      // Wait a moment for first frames to arrive
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      return true;
+    } catch (err) {
+      console.error('[Calibration] Failed to start FSR collection:', err);
+      return false;
+    }
+  }, [isNative]);
+
+  /**
+   * Stop FSR notifications after calibration collection.
+   */
+  const stopFSRCalibrationCollection = useCallback(async (deviceId: string): Promise<void> => {
+    if (!isNative || !deviceId || !fsrNotificationActiveRef.current) return;
+
+    try {
+      // Stop notifications
+      await BleClient.stopNotifications(
+        deviceId,
+        ARDUINO_BLE_SERVICE_UUID,
+        ARDUINO_SENSOR_DATA_CHAR_UUID
+      );
+
+      // Stop FSR streaming on Arduino
+      await BleClient.write(
+        deviceId,
+        ARDUINO_BLE_SERVICE_UUID,
+        ARDUINO_CONTROL_CHAR_UUID,
+        new DataView(new Uint8Array([ArduinoCommand.STOP_FSR]).buffer)
+      );
+
+      fsrNotificationActiveRef.current = false;
+      console.log('[Calibration] Stopped FSR collection, got', fsrCalibrationSamplesRef.current.length, 'frames');
+    } catch (err) {
+      console.error('[Calibration] Failed to stop FSR collection:', err);
+    }
+  }, [isNative]);
+
+  /**
+   * Get the latest FSR frame with raw values.
+   * Returns null if no frames collected.
+   * force = raw sum of all 32 sensors (no scaling)
+   * fsrValues = raw grid values (32 sensors, 0-1023 each)
+   */
+  const getLatestFSRData = useCallback((): { force: number; fsrValues: number[] } | null => {
+    const frames = fsrCalibrationSamplesRef.current;
+    if (frames.length === 0) return null;
+
+    const latestFrame = frames[frames.length - 1];
+    return {
+      force: fsrRawSum(latestFrame),
+      fsrValues: latestFrame.flat,
+    };
+  }, [fsrRawSum]);
+
   // Calibration sequence
   const startCalibrationSequence = useCallback(async () => {
     console.log('Starting calibration sequence...');
@@ -578,6 +728,12 @@ export function useRecordingWizard(): UseRecordingWizardResult {
     // Go to countdown step
     dispatch({ type: 'SET_STEP', step: 'calibration_countdown' });
     dispatch({ type: 'SET_COUNTDOWN', value: 3 });
+
+    // Determine if we should use real FSR data or demo mode
+    const useRealFSR = !state.demoMode.racketEnabled &&
+                       state.devices.racket.isConnected &&
+                       state.devices.racket.deviceId;
+    const arduinoDeviceId = state.devices.racket.deviceId;
 
     // Countdown 3, 2, 1
     const runCountdown = async () => {
@@ -600,12 +756,23 @@ export function useRecordingWizard(): UseRecordingWizardResult {
         });
       }
 
+      // Start FSR collection if using real hardware
+      let fsrCollectionStarted = false;
+      if (useRealFSR && arduinoDeviceId) {
+        console.log('[Calibration] Starting real FSR data collection, deviceId:', arduinoDeviceId);
+        fsrCollectionStarted = await startFSRCalibrationCollection(arduinoDeviceId);
+        console.log('[Calibration] FSR collection started:', fsrCollectionStarted);
+      } else {
+        console.log('[Calibration] Using demo mode - useRealFSR:', useRealFSR, 'deviceId:', arduinoDeviceId);
+      }
+
       // Start squeeze collection
       dispatch({ type: 'SET_STEP', step: 'calibration_squeeze' });
       dispatch({ type: 'START_CALIBRATION_COLLECTION' });
       dispatch({ type: 'SET_SQUEEZE_PROGRESS', value: 1 });
 
       const calibrationStartTime = Date.now();
+      const collectedSamples: CalibrationSample[] = [];
 
       // 5-second squeeze with progress updates
       for (let sec = 1; sec <= 5; sec++) {
@@ -622,29 +789,63 @@ export function useRecordingWizard(): UseRecordingWizardResult {
           }
         }
 
-        // Simulate force data collection (in real implementation, this comes from sensors)
-        const simulatedForce = 20 + Math.random() * 30 + (sec * 5);
-        const sample: CalibrationSample = {
-          timestamp: Date.now() - calibrationStartTime,
-          force: simulatedForce,
-        };
+        let sample: CalibrationSample;
+
+        if (fsrCollectionStarted) {
+          // Use real FSR data from Arduino
+          const fsrData = getLatestFSRData();
+          if (fsrData) {
+            console.log('[Calibration] sec', sec, 'FSR force:', fsrData.force, 'frames:', fsrCalibrationSamplesRef.current.length);
+            sample = {
+              timestamp: Date.now() - calibrationStartTime,
+              force: fsrData.force,
+              fsrValues: fsrData.fsrValues,
+            };
+          } else {
+            // No FSR data yet, use 0
+            console.log('[Calibration] sec', sec, 'No FSR data available yet');
+            sample = {
+              timestamp: Date.now() - calibrationStartTime,
+              force: 0,
+            };
+          }
+        } else {
+          // Demo mode or FSR collection failed: simulate force data collection
+          const simulatedForce = 20 + Math.random() * 30 + (sec * 5);
+          sample = {
+            timestamp: Date.now() - calibrationStartTime,
+            force: simulatedForce,
+          };
+        }
+
+        collectedSamples.push(sample);
         dispatch({ type: 'ADD_CALIBRATION_SAMPLE', sample });
-        dispatch({ type: 'UPDATE_MAX_FORCE', force: simulatedForce });
+        dispatch({ type: 'UPDATE_MAX_FORCE', force: sample.force });
 
         await new Promise((resolve) => {
           calibrationTimerRef.current = setTimeout(resolve, 1000);
         });
       }
 
+      // Stop FSR collection if it was started
+      if (fsrCollectionStarted && arduinoDeviceId) {
+        console.log('[Calibration] Stopping real FSR data collection');
+        await stopFSRCalibrationCollection(arduinoDeviceId);
+      }
+
       // Calibration complete
       const calibrationEndTime = Date.now();
-      const maxForce = 45 + Math.random() * 20; // Simulated max force
+
+      // Calculate max force from collected samples
+      const maxForce = fsrCollectionStarted
+        ? Math.max(...collectedSamples.map(s => s.force), 0)
+        : 45 + Math.random() * 20; // Demo mode: simulated max force
 
       const calibrationResult: CalibrationData = {
         maxForce,
         timestamp: calibrationStartTime,
         durationMs: calibrationEndTime - calibrationStartTime,
-        samples: [], // Would include actual samples in real implementation
+        samples: collectedSamples,
       };
 
       dispatch({ type: 'FINISH_CALIBRATION', result: calibrationResult });
@@ -669,7 +870,7 @@ export function useRecordingWizard(): UseRecordingWizardResult {
     };
 
     runCountdown();
-  }, [isNative]);
+  }, [isNative, state.demoMode.racketEnabled, state.devices.racket.isConnected, state.devices.racket.deviceId, startFSRCalibrationCollection, stopFSRCalibrationCollection, getLatestFSRData]);
 
   // Reset calibration
   const resetCalibration = useCallback(() => {
@@ -702,6 +903,12 @@ export function useRecordingWizard(): UseRecordingWizardResult {
     dispatch({ type: 'SET_STEP', step: 'post_calibration_countdown' });
     dispatch({ type: 'SET_POST_CAL_COUNTDOWN', value: 3 });
 
+    // Determine if we should use real FSR data or demo mode
+    const useRealFSR = !state.demoMode.racketEnabled &&
+                       state.devices.racket.isConnected &&
+                       state.devices.racket.deviceId;
+    const arduinoDeviceId = state.devices.racket.deviceId;
+
     // Countdown 3, 2, 1
     const runCountdown = async () => {
       for (let i = 3; i >= 1; i--) {
@@ -723,12 +930,23 @@ export function useRecordingWizard(): UseRecordingWizardResult {
         });
       }
 
+      // Start FSR collection if using real hardware
+      let fsrCollectionStarted = false;
+      if (useRealFSR && arduinoDeviceId) {
+        console.log('[Post-Calibration] Starting real FSR data collection, deviceId:', arduinoDeviceId);
+        fsrCollectionStarted = await startFSRCalibrationCollection(arduinoDeviceId);
+        console.log('[Post-Calibration] FSR collection started:', fsrCollectionStarted);
+      } else {
+        console.log('[Post-Calibration] Using demo mode - useRealFSR:', useRealFSR, 'deviceId:', arduinoDeviceId);
+      }
+
       // Start squeeze collection
       dispatch({ type: 'SET_STEP', step: 'post_calibration_squeeze' });
       dispatch({ type: 'START_POST_CALIBRATION_COLLECTION' });
       dispatch({ type: 'SET_POST_CAL_SQUEEZE_PROGRESS', value: 1 });
 
       const calibrationStartTime = Date.now();
+      const collectedSamples: CalibrationSample[] = [];
 
       // 5-second squeeze with progress updates
       for (let sec = 1; sec <= 5; sec++) {
@@ -745,29 +963,63 @@ export function useRecordingWizard(): UseRecordingWizardResult {
           }
         }
 
-        // Simulate force data collection (in real implementation, this comes from sensors)
-        const simulatedForce = 18 + Math.random() * 25 + (sec * 4); // Slightly lower than pre-cal to simulate fatigue
-        const sample: CalibrationSample = {
-          timestamp: Date.now() - calibrationStartTime,
-          force: simulatedForce,
-        };
+        let sample: CalibrationSample;
+
+        if (fsrCollectionStarted) {
+          // Use real FSR data from Arduino
+          const fsrData = getLatestFSRData();
+          if (fsrData) {
+            console.log('[Post-Calibration] sec', sec, 'FSR force:', fsrData.force, 'frames:', fsrCalibrationSamplesRef.current.length);
+            sample = {
+              timestamp: Date.now() - calibrationStartTime,
+              force: fsrData.force,
+              fsrValues: fsrData.fsrValues,
+            };
+          } else {
+            // No FSR data yet, use 0
+            console.log('[Post-Calibration] sec', sec, 'No FSR data available yet');
+            sample = {
+              timestamp: Date.now() - calibrationStartTime,
+              force: 0,
+            };
+          }
+        } else {
+          // Demo mode or FSR collection failed: simulate force data (slightly lower than pre-cal to simulate fatigue)
+          const simulatedForce = 18 + Math.random() * 25 + (sec * 4);
+          sample = {
+            timestamp: Date.now() - calibrationStartTime,
+            force: simulatedForce,
+          };
+        }
+
+        collectedSamples.push(sample);
         dispatch({ type: 'ADD_POST_CALIBRATION_SAMPLE', sample });
-        dispatch({ type: 'UPDATE_POST_CAL_MAX_FORCE', force: simulatedForce });
+        dispatch({ type: 'UPDATE_POST_CAL_MAX_FORCE', force: sample.force });
 
         await new Promise((resolve) => {
           postCalibrationTimerRef.current = setTimeout(resolve, 1000);
         });
       }
 
+      // Stop FSR collection if it was started
+      if (fsrCollectionStarted && arduinoDeviceId) {
+        console.log('[Post-Calibration] Stopping real FSR data collection');
+        await stopFSRCalibrationCollection(arduinoDeviceId);
+      }
+
       // Post-calibration complete
       const calibrationEndTime = Date.now();
-      const maxForce = 40 + Math.random() * 18; // Slightly lower to simulate fatigue
+
+      // Calculate max force from collected samples
+      const maxForce = fsrCollectionStarted
+        ? Math.max(...collectedSamples.map(s => s.force), 0)
+        : 40 + Math.random() * 18; // Demo mode: slightly lower to simulate fatigue
 
       const postCalibrationResult: CalibrationData = {
         maxForce,
         timestamp: calibrationStartTime,
         durationMs: calibrationEndTime - calibrationStartTime,
-        samples: [],
+        samples: collectedSamples,
       };
 
       dispatch({ type: 'FINISH_POST_CALIBRATION', result: postCalibrationResult });
@@ -786,7 +1038,7 @@ export function useRecordingWizard(): UseRecordingWizardResult {
     };
 
     runCountdown();
-  }, [isNative]);
+  }, [isNative, state.demoMode.racketEnabled, state.devices.racket.isConnected, state.devices.racket.deviceId, startFSRCalibrationCollection, stopFSRCalibrationCollection, getLatestFSRData]);
 
   // Skip post-calibration
   const skipPostCalibration = useCallback(() => {
@@ -815,7 +1067,7 @@ export function useRecordingWizard(): UseRecordingWizardResult {
     dispatch({ type: 'SET_CAMERA_PREVIEW', active });
   }, []);
 
-  // Recording controls
+  // Recording controls - now delegates to native RecordingStateMachine
   const startRecording = useCallback(async (startedBy: RecordingStartedBy) => {
     if (!state.sessionId) {
       console.error('[useRecordingWizard] No session ID set - cannot start recording');
@@ -823,33 +1075,65 @@ export function useRecordingWizard(): UseRecordingWizardResult {
     }
 
     console.log(`[useRecordingWizard] Starting recording (initiated by ${startedBy}), sessionId: ${state.sessionId}`);
+
+    // Update local wizard state for UI
     dispatch({ type: 'START_RECORDING', startedBy });
     // Transition to recording_active step
     dispatch({ type: 'SET_STEP', step: 'recording_active' });
 
+    // Request state machine to start (handles video, Watch, Arduino orchestration)
     if (isNative) {
       try {
-        const result = await WatchMotion.startWatchRecording({ sessionId: state.sessionId });
+        const arduinoDeviceId = state.devices.racket.deviceId || undefined;
+        const result = await RecordingStateMachine.requestStart({
+          sessionId: state.sessionId,
+          arduinoDeviceId,
+          plannedDuration: state.plannedDuration,
+          startedBy: startedBy === 'watch' ? 'watch' : 'phone',
+        });
+
         if (!result.success) {
-          console.error('Failed to start Watch recording:', result.error);
+          console.error('[useRecordingWizard] State machine failed to start:', result.error);
+          // Revert wizard state on failure
+          dispatch({ type: 'STOP_RECORDING' });
+        } else {
+          console.log('[useRecordingWizard] State machine started successfully');
         }
       } catch (err) {
-        console.error('Error starting Watch recording:', err);
+        console.error('[useRecordingWizard] Error requesting state machine start:', err);
+        dispatch({ type: 'STOP_RECORDING' });
       }
     }
-  }, [state.sessionId, isNative]);
+  }, [state.sessionId, state.plannedDuration, state.devices.racket.deviceId, isNative]);
 
-  const stopRecording = useCallback(async () => {
-    console.log('Stopping recording...');
+  const stopRecording = useCallback(async (): Promise<{ videoPath?: string } | null> => {
+    console.log('[useRecordingWizard] Stopping recording...');
+
+    // Update local wizard state
     dispatch({ type: 'STOP_RECORDING' });
 
+    // Request state machine to stop (handles video, Watch, Arduino)
     if (isNative) {
       try {
-        await WatchMotion.stopWatchRecording();
+        const result = await RecordingStateMachine.requestStop();
+
+        if (!result.success) {
+          console.error('[useRecordingWizard] State machine stop failed:', result.error);
+          return null;
+        } else {
+          console.log('[useRecordingWizard] State machine stopped successfully');
+          if (result.result?.videoPath) {
+            console.log('[useRecordingWizard] Video saved at:', result.result.videoPath);
+          }
+          // Return the video path for the caller
+          return { videoPath: result.result?.videoPath };
+        }
       } catch (err) {
-        console.error('Error stopping Watch recording:', err);
+        console.error('[useRecordingWizard] Error requesting state machine stop:', err);
+        return null;
       }
     }
+    return null;
   }, [isNative]);
 
   // Enable Watch recording control when on camera preview
